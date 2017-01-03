@@ -1,7 +1,7 @@
 ## Multi-Hands Tracking by multiple object tracking and pose estimation
 This is the batch version of multi-hands tracking C++ code.
 
-We used *faster-rcnn* to detect objects, *HOG+SVM* to model appearance features and *Kalman filter* to model motion dynamics. *[Convulutional Pose Machines]*(https://github.com/shihenw/convolutional-pose-machines-release) was used to estimate wrist postions.
+We used *faster-rcnn* to detect objects, *HOG+SVM* to model appearance features and *Kalman filter* to model motion dynamics. [*Convulutional Pose Machines*](https://github.com/shihenw/convolutional-pose-machines-release) was used to estimate wrist postions.
 
 ## Pre-requisites
 - caffe-faster-rcnn
