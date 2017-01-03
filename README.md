@@ -7,6 +7,7 @@ We used *faster-rcnn* to detect objects. We used *HOG+SVM* to obtain appearance 
 - opencv 2.4.x
 - caffe-faster-rcnn
 - libconfig
+- faster-rcnn model/weights && convolutional pose machines model/weights 
 
 ## Run-time libs
 - export PYTHONPATH=/home/gengshan/workDec/threadProc/lib:/home/gengshan/workDec/caffe-fast-rcnn-faster-rcnn/python
