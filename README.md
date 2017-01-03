@@ -19,6 +19,7 @@ We used *faster-rcnn* to detect objects. We used *HOG+SVM* to obtain appearance 
 - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/cuda-7.0/pkgconfig
 
 ## Usage
+- `make`
 - clear output data folder `rm -rf data/*`
 - run `./main  config.c`
 - run genVideo.ipynb to generate example videos 
