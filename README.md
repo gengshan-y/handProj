@@ -1,7 +1,7 @@
-# Multi-Hands Tracking by multiple object tracking and pose estimation
-This is the batch version of multi-hands tracking C++ code.
+# Multi-person Pose Tracking
+This is the batch version of multi-person pose tracking C++ code.
 
-We used *faster-rcnn* to detect objects. We used *HOG+SVM* to obtain appearance similarity and *Kalman filter* to model motion dynamics. Summing up the scores from appearance model and motion model, we associate detections to tracking objects.  Then [*Convulutional Pose Machines*](https://github.com/shihenw/convolutional-pose-machines-release) was used to estimate wrist postions.
+We used *faster-rcnn* to detect objects. We used *HOG+SVM* to obtain appearance similarity and *Kalman filter* to model motion dynamics. Summing up the scores from appearance model and motion model, we associate detections to tracking objects.  Then [*Convulutional Pose Machines*](https://github.com/shihenw/convolutional-pose-machines-release) was used to estimate joint (currently wrist) postions.
 
 ## Features
 - concurrency by pthreads mutex
