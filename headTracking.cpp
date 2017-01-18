@@ -52,12 +52,8 @@ int main(int argc, char* argv[]) {
         /* process a frame and get detection result */
         resize(frame, frame, imgSize);  // set to same-scale as train
         hog.detectMultiScale(frame, found, 0, winStride, Size(0, 0), 1.05, 3);
-
-        /* remove inner boxes */
-        found = rmInnerBoxes(found);
-
-        /* extend bounding box */
-        extBBox(found);
+        found = rmInnerBoxes(found);  // remove inner boxes
+        extBBox(found);  // extend bounding box
 
         Mat dispFrame;
         frame.copyTo(dispFrame);
@@ -93,7 +89,7 @@ int main(int argc, char* argv[]) {
         /* show detection result */
         if (string(argv[2]) == "y") {
             imshow("demo", dispFrame);
-            pauseFrame(1);
+            pauseFrame(10);
         }
     }
     
