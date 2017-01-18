@@ -12,7 +12,7 @@ using namespace cv;
 const char* detectorPath = "./HogDetector.txt";  // const char* for input file 
 
 /* for resizing image */
-const Size imgSize = Size(352, 198);  // resized image size 
+const Size imgSize = Size(360, 640);  // resized image size 
 
 /* global current frame to store results */
 char countStr [50];
@@ -22,6 +22,7 @@ unsigned int upAccum = 0;
 unsigned int downAccum = 0;
 
 string appearancePath = "/data/gengshan/hdTracking/";
+string outputPath = "/data/gengshan/handProj/";
 
 void pauseFrame(unsigned int milliSeconds) {
     char key = (char) waitKey(milliSeconds);
@@ -91,7 +92,7 @@ TrackingObj measureObj(Mat targImg, Rect detRes) {
                                                   // current ID is a faked one
 }
 
-void updateTracker(vector<Rect> found, Mat targImg,
+void updateTracker(vector<Rect> found, Mat& targImg,
                    vector<TrackingObj>& tracker) {
     /* Upgrade old tracking objects */
     for (auto it = tracker.begin(); it != tracker.end(); it++) {

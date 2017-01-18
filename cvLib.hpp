@@ -14,6 +14,7 @@ extern unsigned int upAccum;  // accumulator for up-down-counting
 extern unsigned int downAccum;
 
 extern string appearancePath;  // to store tracking object appearance
+extern string outputPath;  // to store large output images
 
 /* Pause current frame */
 void pauseFrame(unsigned int milliSeconds);
@@ -28,7 +29,7 @@ vector<Rect> rmInnerBoxes(vector<Rect> found);
 TrackingObj measureObj(Mat targImg, Rect detRes);
 
 /* get cropped images from frame */
-void updateTracker(vector<Rect> found, Mat targImg, 
+void updateTracker(vector<Rect> found, Mat& targImg, 
                    vector<TrackingObj>& tracker);
 
 /* draw bounding box */

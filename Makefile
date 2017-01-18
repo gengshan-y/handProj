@@ -6,10 +6,15 @@ CXXFLAGS=-g -std=c++0x -Wall `pkg-config opencv --cflags`
 
 LDFLAGS=`pkg-config opencv --libs`  # -g for debugging symbols
 
-all: clean headTracking
+CXXFLAGS_FA=-g -std=c++0x -Wall `pkg-config opencv cublas-7.0 cuda-7.0 cudart-7.0 --cflags`
+CXXFLAGS_FA:=${CXXFLAGS_FA} -I/home/gengshan/workDec/caffe-fast-rcnn-faster-rcnn/include -I/home/gengshan/workDec/caffe-fast-rcnn-faster-rcnn/.build_release/src
+LDFLAGS_FA=`pkg-config cudart-7.0 cublas-7.0 cuda-7.0 opencv libglog --libs` 
+LDFLAGS_FA:=${LDFLAGS_FA} -L/home/gengshan/workDec/caffe-fast-rcnn-faster-rcnn/build/lib -lcaffe -L/home/gengshan/workOct/cudnn_v3/lib64 -lcudnn
 
-headTracking: global.o cvLib.o Tracker.o imgSVM.o cmpLib.o
-	${CC} -o headTracking *.o headTracking.cpp ${LDFLAGS} ${CXXFLAGS} 
+all: clean main
+
+main: global.o cvLib.o Tracker.o imgSVM.o cmpLib.o nms.o caffeDet.o
+	${CC} -o main *.o main.cpp ${LDFLAGS} ${CXXFLAGS}  ${CXXFLAGS_FA}  ${LDFLAGS_FA}
 #  use *.o to link with all .o files, otherwise will ignore all .o files
 
 global.o: global.hpp
@@ -22,5 +27,11 @@ Tracker.o: Tracker.hpp
 
 imgSVM.o: imgSVM.hpp
 
+nms.o: 
+	nvcc -c nms_kernel.cu -o nms.o
+
+caffeDet.o:
+	g++ -c caffeDet.cpp -o caffeDet.o ${CXXFLAGS_FA}
+
 clean: 
-	rm -f headTracking *.o
+	rm -f main *.o

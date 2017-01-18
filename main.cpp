@@ -2,6 +2,7 @@
 #include "global.hpp"
 #include "Tracker.hpp"
 #include "cvLib.hpp"
+#include "caffeDet.hpp"
 
 using namespace std;
 using namespace cv;
@@ -9,7 +10,7 @@ using namespace cv;
 int main(int argc, char* argv[]) {
     /* Basic info */
     if (argc != 3) {
-        cout << "hogHeadDet input-vid-path " 
+        cout << "./main input-vid-path " 
              << "display-result[y/n]" << endl;
         exit(-1);
     }
@@ -22,8 +23,12 @@ int main(int argc, char* argv[]) {
     vector<TrackingObj> tracker;  // a tracker to monitor all heads
 
     /* Build detector */
-    HOGDescriptor hog(winSize, blockSize, blockStride, cellSize, nbins);
-    buildDetector(hog, detectorPath);
+    string model_file = "/home/gengshan/workDec/threadProc/model/faster_rcnn_test.pt";
+    string weights_file = "/home/gengshan/workDec/threadProc/model/VGG16_faster_rcnn_final.caffemodel";
+    int GPUID=0;
+    Caffe::SetDevice(GPUID);
+    Caffe::set_mode(Caffe::GPU);
+    Detector caffeDet = Detector(model_file, weights_file);
 
     /* Read in frames and process */
     VideoCapture targetVid(argv[1]);
@@ -51,45 +56,28 @@ int main(int argc, char* argv[]) {
        
         /* process a frame and get detection result */
         resize(frame, frame, imgSize);  // set to same-scale as train
-        hog.detectMultiScale(frame, found, 0, winStride, Size(0, 0), 1.05, 3);
-        found = rmInnerBoxes(found);  // remove inner boxes
-        extBBox(found);  // extend bounding box
+        caffeDet.DetectImg(frame, found);
 
-        Mat dispFrame;
-        frame.copyTo(dispFrame);
+        Mat detFrame;
+        frame.copyTo(detFrame);
         /* draw bounding box */
-        drawBBox(found, dispFrame);
-        /* put information on image */
-        putText(dispFrame, 
-                "frame " + string(countStr) + "/" + to_string(totalFrame), 
-                cvPoint(20, 20), FONT_HERSHEY_COMPLEX_SMALL,
-                0.8, cvScalar(0, 0, 0));  // frame progress
+        drawBBox(found, detFrame);
 
-
-        /* Display image */
-        // imshow("demo", dispFrame);
-        // pauseFrame(1);
-
+        Mat trkFrame;
+        frame.copyTo(trkFrame);
         /* get cropped images in detRests */
-        updateTracker(found, frame, tracker);
+        updateTracker(found, trkFrame, tracker);
  
-        // countRests(detRests);  // count detection results counting
-
         /* save cropped image */
         // svCroppedImg(found, frame);
     
-        /* counting */
-        // countHead(detRests, frame, memoHead, up, down);
-
-        putText(dispFrame, "up: " + to_string(upAccum) + 
-                        " down: " + to_string(downAccum),
-                cvPoint(20, 40), FONT_HERSHEY_COMPLEX_SMALL,
-                0.8, cvScalar(0, 0, 0));  // up / down counting
-
         /* show detection result */
         if (string(argv[2]) == "y") {
-            imshow("demo", dispFrame);
-            pauseFrame(10);
+            imshow("demo", trkFrame);
+            pauseFrame(1);
+        }
+        else {
+            imwrite(outputPath + string(countStr) + ".jpg", trkFrame);
         }
     }
     
