@@ -1,6 +1,9 @@
 #ifndef CV_LIB_HPP
 #define CV_LIB_HPP
 
+#define mMax(a, b) (((a)>(b)) ? (a) :(b))
+#define mMin(a, b) (((a)<(b)) ? (a) :(b))
+
 /* Global vars for tracking */
 extern const char* detectorPath;  // const char* for input file 
 
@@ -46,5 +49,8 @@ Mat combImgs(Mat img1, Mat img2);
 
 /* Draw tracklet of tracker in current frame and and show */
 void drawTracklet(Mat frame, TrackingObj tracker);
+
+/* measure state distance */
+float meaStateDis(vector<float> meaArray, vector<float> predArray);
 
 #endif  // CV_LIB_HPP

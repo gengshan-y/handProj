@@ -13,14 +13,14 @@ class TrackingObj {
  public:
   /* Constructor */
   TrackingObj(unsigned int objID, Mat objAppearance, Rect bBox)
-              : age(1), vel(0, 0), state(5, 1, CV_32F), KF(5, 3, 0), 
+              : age(1), vel(0, 0), state(6, 1, CV_32F), KF(6, 4, 0),  // 6 states 
                 negNum(5) {
     ID = objID;
     appearance = objAppearance;
 
     /* convert rectangle to position and size */
     pos = make_pair(bBox.x + bBox.width / 2.0, bBox.y + bBox.height / 2.0);
-    size = float(bBox.width * bBox.height);
+    size = make_pair(bBox.width, bBox.height);
 
     /* Initialize Kalman Filter and SVM */
     attr2State();  // convert attributes to Kalman Filter state
@@ -115,7 +115,7 @@ class TrackingObj {
   Mat appearance;  // image of detected object
   pair<float, float> pos;  // center of detected object
   pair<float, float> vel;  // velocity of detected object
-  float size;  // size of detected object
+  pair<float, float> size;  // width and height of detected object
 
   Mat state;  // state of Kalman Filter
   KalmanFilter KF;  // Kalman Filter object

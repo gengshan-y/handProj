@@ -111,27 +111,29 @@ void updateTracker(vector<Rect> found, Mat& targImg,
     for (auto it = meaObjs.begin(); it != meaObjs.end(); it++) {
         cout << "@@comparing stage" << endl;
         /* get measured state */
-        // cout << "measured..." << endl;
-        // (*it).showState();
+        cout << "measured..." << endl;
+        (*it).showState();
         vector<float> meaArray = (*it).getStateVec();
 
         vector<float> scoreArr;  // to store the comparison scores 
         for (auto itt = tracker.begin(); itt != tracker.end(); itt++) {
             /* get tracker predicted state */
-            // cout << "predicted..." << endl; 
-            // (*itt).showState();
+            cout << "predicted..." << endl; 
+            (*itt).showState();
             vector<float> predArray = (*itt).getStateVec();
 
-            // compare states
-            float stateScore = norm(meaArray, predArray, NORM_L1);
             float score;
-            cout << "dist metric:\t" << stateScore << endl;;
+            // compare states
+            float stateScore = meaStateDis(meaArray, predArray);
+            // float alpha = 0.001; 
+            // stateScore = exp(-stateScore * alpha);  // normalize to 0-1, tune a
+            cout << "iou metric:\t" << stateScore << endl;;
 
             // get SVM score for measurement
             float SVMScore = (*itt).testSVM( (*it).getAppearance() );
             cout << "SVM score: \t" << SVMScore << endl;
             // waitKey(0);
-            // score = stateScore + SVMScore;
+            score = (stateScore + SVMScore) / 2.;
             score = SVMScore;
 
             scoreArr.push_back(score);  // add score to an array
@@ -236,6 +238,23 @@ void drawTracklet(Mat frame, TrackingObj tracker) {
   imshow("tracklet", frame);
 }
 
+
+float meaStateDis(vector<float> meaArray, vector<float> predArray) {
+  float score = 0;
+  // float posDist = pow(meaArray[0] - predArray[0], 2) +\
+                  pow(meaArray[1] - predArray[1], 2);
+  Rect r1(meaArray[0] - meaArray[4]/2., meaArray[1] - meaArray[5]/2., \
+          meaArray[4], meaArray[5]);
+  Rect r2(predArray[0] - predArray[4]/2., predArray[1] - predArray[5]/2., \
+          predArray[4], predArray[5]);
+  // cout << "r1:" << r1.x << "," << r1.y << "," << r1.width << "," << r1.height << endl;
+  // cout << "r2:" << r2.x << "," << r2.y << "," << r2.width << "," << r2.height << endl;
+  float iou = mMax(0, mMin(r1.x+r1.width, r2.x+r2.width) - mMax(r1.x, r2.x)) \
+            * mMax(0, mMin(r1.y+r1.height, r2.y+r2.height) - mMax(r1.y, r2.y));
+  // cout << "intersection:" << iou << endl;;
+  score += iou / (r1.width * r1.height + r2.width * r2.height - iou);
+  return score;
+}
 
 void testStateParsing(TrackingObj testObj) {
   TrackingObj tmpObj = testObj;

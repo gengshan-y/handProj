@@ -22,10 +22,11 @@ Mat TrackingObj::getState() {
 }
 
 Mat TrackingObj::getMeaState() {
-  Mat meaState(3, 1, CV_32F);
+  Mat meaState(4, 1, CV_32F);
   meaState.at<float>(0, 0) = state.at<float>(0, 0);
   meaState.at<float>(1, 0) = state.at<float>(1, 0);
   meaState.at<float>(2, 0) = state.at<float>(4, 0);
+  meaState.at<float>(3, 0) = state.at<float>(5, 0);
   return meaState;
 }
 
@@ -55,7 +56,7 @@ void TrackingObj::showInfo() {
   cout << "age\t" << age << endl;
   cout << "pos\t(" << pos.first << "," << pos.second << ")" << endl;
   cout << "vel\t(" << vel.first << "," << vel.second << ")" << endl;
-  cout << "size\t" << size << endl;
+  cout << "size\t" << size.first << "," << size.second << ")" << endl;
   imshow("object appearance", appearance);
   // pauseFrame(0);
   showState();
@@ -71,11 +72,13 @@ void TrackingObj::attr2State() {
   state.at<float>(count++, 0) = pos.second;
   state.at<float>(count++, 0) = vel.first;
   state.at<float>(count++, 0) = vel.second;
-  state.at<float>(count++, 0) = size;
+  state.at<float>(count++, 0) = size.first;
+  state.at<float>(count++, 0) = size.second;
 
   /* Assert */
   if(count != state.rows) {
     cout << "Size check failed." << endl;
+    cout << count << ", " << state.rows << endl;
     exit(-1);
   }
 }
@@ -83,7 +86,7 @@ void TrackingObj::attr2State() {
 void TrackingObj::state2Attr() {
   pos = make_pair(state.at<float>(0, 0), state.at<float>(1, 0));
   vel = make_pair(state.at<float>(2, 0), state.at<float>(3, 0));
-  size = state.at<float>(4, 0);
+  size = make_pair(state.at<float>(4, 0), state.at<float>(5, 0));
 }
 
 bool TrackingObj::operator==(const TrackingObj& other) {
@@ -117,15 +120,17 @@ void TrackingObj::showState() {
 
 void TrackingObj::initKalmanFilter() {
   // showState();
-  KF.transitionMatrix = *( Mat_<float>(5, 5) << 1, 0, 1, 0, 0,  // fps-1 
-                                                0, 1, 0, 1, 0,
-                                                0, 0, 1, 0, 0,
-                                                0, 0, 0, 1, 0,
-                                                0, 0, 0, 0, 1 );
+  KF.transitionMatrix = *( Mat_<float>(6, 6) << 1, 0, 1, 0, 0, 0,  // fps-1 
+                                                0, 1, 0, 1, 0, 0,
+                                                0, 0, 1, 0, 0, 0,
+                                                0, 0, 0, 1, 0, 0,
+                                                0, 0, 0, 0, 1, 0,
+                                                0, 0, 0, 0, 0, 1 );
 
-  KF.measurementMatrix = *( Mat_<float>(3, 5) << 1, 0, 0, 0, 0,
-                                                 0, 1, 0, 0, 0,
-                                                 0, 0, 0, 0, 1 );
+  KF.measurementMatrix = *( Mat_<float>(4, 6) << 1, 0, 0, 0, 0, 0,
+                                                 0, 1, 0, 0, 0, 0,
+                                                 0, 0, 0, 0, 1, 0,
+                                                 0, 0, 0, 0, 0, 1 );
 
   setIdentity(KF.processNoiseCov, Scalar::all(1e-5));   // to be tuned
   setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));  // to be tuned
