@@ -1,8 +1,4 @@
-#include <fstream>
-#include <opencv2/opencv.hpp>
-#include "Tracker.hpp"
 #include "cvLib.hpp"
-#include "cmpLib.hpp"
 
 using namespace std;
 using namespace cv;
@@ -88,7 +84,7 @@ TrackingObj measureObj(Mat targImg, Rect detRes) {
 
     targImg(detRes).copyTo(croppedImg);
     resize(croppedImg, croppedImg, Size(64, 64));  // resize to fixed size 
-    return TrackingObj(currID, croppedImg, detRes);  // measured object
+    return TrackingObj(currID++, croppedImg, detRes);  // measured object
                                                   // current ID is a faked one
 }
 
@@ -98,7 +94,7 @@ void updateTracker(vector<Rect> found, Mat& targImg,
     for (auto it = tracker.begin(); it != tracker.end(); it++) {
         (*it).incAge();
         (*it).predKalmanFilter();
-        // (*it).showInfo();
+        (*it).showInfo();
     }
 
     /* Build measured objects */
@@ -134,7 +130,6 @@ void updateTracker(vector<Rect> found, Mat& targImg,
             cout << "SVM score: \t" << SVMScore << endl;
             // waitKey(0);
             score = (stateScore + SVMScore) / 2.;
-            score = SVMScore;
 
             scoreArr.push_back(score);  // add score to an array
         }
@@ -145,13 +140,14 @@ void updateTracker(vector<Rect> found, Mat& targImg,
         //                       min_element(scoreArr.begin(), scoreArr.end()));
         // if the highest score is higher than a th
         // if (scoreArr.size() != 0 && scoreArr[targIdx] < 1000) {
-        if (scoreArr.size() != 0 && scoreArr[targIdx] > 0.6) {
+        if (scoreArr.size() != 0 && scoreArr[targIdx] > 0.5) {
             cout << "**ID " << tracker[targIdx].getID() << " updated" << endl;
             /* update the according tracker */
 
             // update tracklet
             tracker[targIdx].updateTracklet( (*it).getPos() );
-            drawTracklet(targImg, tracker[targIdx]);
+            drawObj.drawTracklet(targImg, tracker[targIdx].getID(), 
+                                 tracker[targIdx].getTracklet());
             // update SVM
             tracker[targIdx].updateSVM( targImg, (*it).getAppearance() );
             tracker[targIdx].updateKalmanFilter( (*it).getMeaState() );
@@ -169,10 +165,10 @@ void updateTracker(vector<Rect> found, Mat& targImg,
         tracker.push_back(*it);
         currID++;  // update ID
         cout << "**ID " << tracker.back().getID() << " added." << endl;
-        tracker.back().showInfo();
+        // tracker.back().showInfo();
     }
 
-    /* Get rid of out-dated objects */
+    /* Remove outdated objects */
     for (int it = tracker.size() - 1; it >= 0; it--) {
         if ( (tracker[it]).getAge() > 10 ) {
             cout << "$$ID " << tracker[it].getID() << " to be deleted." << endl;
@@ -189,7 +185,9 @@ void updateTracker(vector<Rect> found, Mat& targImg,
             (*(tracker.begin() + it)).rmSVM();
 
             // save appearance for future reference
-            (*(tracker.begin() + it)).svAppearance();
+            // (*(tracker.begin() + it)).svAppearance();
+            destroyWindow("object " + \
+               to_string((tracker.begin() + it)->getID()));  // destory window
             tracker.erase(tracker.begin() + it);
         }
     }
@@ -223,19 +221,6 @@ Mat combImgs(Mat img1, Mat img2) {
     img1.copyTo(img3(Rect(0, 0, sz1.width, sz1.height)));
     img2.copyTo(img3(Rect(sz1.width, 0, sz2.width, sz2.height)));
     return img3;
-}
-
-void drawTracklet(Mat frame, TrackingObj tracker) {
-  vector<pair<unsigned int, unsigned int>> tracklet = tracker.getTracklet();
-
-  for (unsigned int it = 1; it < tracklet.size(); it++) {
-    /* Draw line */
-    line(frame, Point(tracklet[it - 1].first, tracklet[it - 1].second), 
-                Point(tracklet[it].first, tracklet[it].second), 
-                Scalar(110, 220, 0), 5);
-  }
-  
-  imshow("tracklet", frame);
 }
 
 

@@ -11,3 +11,5 @@ const CvSize blockStride = cvSize(8, 8);  //block stride, a multiple of cellSize
 const CvSize winStride = cvSize(8, 8);    //window stride, a multiple of blockStride 
 const CvSize cellSize = cvSize(8, 8);     //cell size, fixed 
 const int nbins = 9;  // number of direction bins, fixed 
+
+const objDraw drawObj = objDraw();

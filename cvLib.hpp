@@ -1,6 +1,13 @@
 #ifndef CV_LIB_HPP
 #define CV_LIB_HPP
 
+#include "draw.hpp"
+#include "Tracker.hpp"
+#include "cmpLib.hpp"
+#include <fstream>
+#include <opencv2/opencv.hpp>
+
+
 #define mMax(a, b) (((a)>(b)) ? (a) :(b))
 #define mMin(a, b) (((a)<(b)) ? (a) :(b))
 
@@ -46,9 +53,6 @@ void testStateParsing(TrackingObj testObj);
 
 /* combine two identical-sized images */
 Mat combImgs(Mat img1, Mat img2);
-
-/* Draw tracklet of tracker in current frame and and show */
-void drawTracklet(Mat frame, TrackingObj tracker);
 
 /* measure state distance */
 float meaStateDis(vector<float> meaArray, vector<float> predArray);

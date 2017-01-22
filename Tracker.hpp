@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include "imgSVM.hpp"
+#include "draw.hpp"
 
 using namespace std;
 using namespace cv;
@@ -14,7 +15,7 @@ class TrackingObj {
   /* Constructor */
   TrackingObj(unsigned int objID, Mat objAppearance, Rect bBox)
               : age(1), vel(0, 0), state(6, 1, CV_32F), KF(6, 4, 0),  // 6 states 
-                negNum(5) {
+                negNum(10) {
     ID = objID;
     appearance = objAppearance;
 

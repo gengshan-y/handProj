@@ -56,12 +56,16 @@ void TrackingObj::showInfo() {
   cout << "age\t" << age << endl;
   cout << "pos\t(" << pos.first << "," << pos.second << ")" << endl;
   cout << "vel\t(" << vel.first << "," << vel.second << ")" << endl;
-  cout << "size\t" << size.first << "," << size.second << ")" << endl;
-  imshow("object appearance", appearance);
+  cout << "size\t(" << size.first << "," << size.second << ")" << endl;
+  imshow("object " + to_string(ID), appearance);
   // pauseFrame(0);
   showState();
+  
+/* SVM too long
   if (trackerSVM)
     trackerSVM->showInfo();
+*/
+
   cout << "------------------------------------||" << endl;
 }
 
@@ -110,12 +114,12 @@ bool TrackingObj::operator==(const TrackingObj& other) {
 }
 
 void TrackingObj::showState() {
-  cout << "state: \n" << state << endl;
+  cout << "state\t" << state << endl;
   /*
   for (int it = 0; it < state.rows; it++) {
     cout << state.at<float>(it, 0) << endl;
   }
-  */
+  */  
 }
 
 void TrackingObj::initKalmanFilter() {
@@ -241,6 +245,7 @@ float TrackingObj::testSVM(Mat inAppearance) {
   float res = trackerSVM->SVMPredict(inFeat);
   Mat cmbedImg = combImgs(inAppearance, appearance);
   imshow("", cmbedImg);
+  // waitKey(0);
   
   /*
   imshow("img1", inAppearance);

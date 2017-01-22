@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
     /* Initialization */
     Mat frame;  // to store video frames
     vector<Rect> found;  // to store detection results
-    unsigned int count = 160;  // initialize the fist frame to be decoded, 80
+    unsigned int count = 170;  // initialize the fist frame to be decoded, 80
     vector<TrackingObj> tracker;  // a tracker to monitor all heads
 
     /* Build detector */
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
         /* show detection result */
         if (string(argv[2]) == "y") {
             imshow("demo", trkFrame);
-            pauseFrame(1);
+            pauseFrame(0);
         }
         else {
             imwrite(outputPath + string(countStr) + ".jpg", trkFrame);

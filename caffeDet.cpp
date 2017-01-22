@@ -156,12 +156,13 @@ void Detector::boxes_sort(const int num, const float* pred, float* sorted_pred)
 void Detector::getBBox(vector<cv::Rect>& found, int* keep, int num_out, float* sorted_pred_cls, float CONF_THRESH)
 {
     found.clear();
-    for(int i = 0; sorted_pred_cls[keep[i]*5+4]>CONF_THRESH && i < num_out; i++)
+    int i = 0;
+    for(; sorted_pred_cls[keep[i]*5+4]>CONF_THRESH && i < num_out; i++)
     {
         cv::Rect rect(cv::Point(sorted_pred_cls[keep[i]*5+0], sorted_pred_cls[keep[i]*5+1]),cv::Point(sorted_pred_cls[keep[i]*5+2], sorted_pred_cls[keep[i]*5+3])); 
         found.push_back(rect);
-        std::cout << i << std::endl;  // ""
     }
+    std::cout << "@@" << i << " objects detected" << std::endl;
 }
 
 
