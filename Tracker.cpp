@@ -13,6 +13,15 @@ Mat TrackingObj::getAppearance() {
   return appearance;
 }
 
+Mat TrackingObj::getFrame() {
+  return oriFrame;
+}
+
+Rect TrackingObj::getBBox() {
+  return Rect(pos.first - size.first/2, pos.second - size.second/2,
+              size.first, size.second);
+}
+
 pair<float, float> TrackingObj::getPos() {
   return pos;
 }
@@ -257,6 +266,9 @@ float TrackingObj::testSVM(Mat inAppearance) {
 }
 
 void TrackingObj::updateSVM(Mat bgImg, Mat inAppearance) { 
+  oriFrame = bgImg;// update frame
+  appearance = inAppearance;
+
   vector<Mat> newImgPos;
   newImgPos.push_back(inAppearance);
 

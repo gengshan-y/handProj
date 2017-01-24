@@ -80,16 +80,17 @@ vector<Rect> rmInnerBoxes(vector<Rect> found) {
 }
 
 TrackingObj measureObj(Mat targImg, Rect detRes) {
-    Mat croppedImg;  // detected head img
-
-    targImg(detRes).copyTo(croppedImg);
-    resize(croppedImg, croppedImg, Size(64, 64));  // resize to fixed size 
-    return TrackingObj(currID++, croppedImg, detRes);  // measured object
+    Mat tmp;  // detected head img
+    targImg.copyTo(tmp);
+    return TrackingObj(currID++, tmp, detRes);  // measured object
                                                   // current ID is a faked one
 }
 
 void updateTracker(vector<Rect> found, Mat& targImg,
                    vector<TrackingObj>& tracker) {
+    Mat oriImg;
+    targImg.copyTo(oriImg);  // save original image
+
     /* Upgrade old tracking objects */
     for (auto it = tracker.begin(); it != tracker.end(); it++) {
         (*it).incAge();
@@ -149,8 +150,9 @@ void updateTracker(vector<Rect> found, Mat& targImg,
             drawObj.drawTracklet(targImg, tracker[targIdx].getID(), 
                                  tracker[targIdx].getTracklet());
             // update SVM
-            tracker[targIdx].updateSVM( targImg, (*it).getAppearance() );
+            tracker[targIdx].updateSVM( oriImg, (*it).getAppearance() );
             tracker[targIdx].updateKalmanFilter( (*it).getMeaState() );
+            tracker[targIdx].state2Attr();
 
             // reset age
             tracker[targIdx].resetAge();
@@ -188,6 +190,8 @@ void updateTracker(vector<Rect> found, Mat& targImg,
             // (*(tracker.begin() + it)).svAppearance();
             destroyWindow("object " + \
                to_string((tracker.begin() + it)->getID()));  // destory window
+            destroyWindow("pose " + \
+               to_string((tracker.begin() + it)->getID()));
             tracker.erase(tracker.begin() + it);
         }
     }

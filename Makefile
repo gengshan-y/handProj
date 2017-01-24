@@ -13,7 +13,7 @@ LDFLAGS_FA:=${LDFLAGS_FA} -L/home/gengshan/workDec/caffe-fast-rcnn-faster-rcnn/b
 
 all: clean main
 
-main: global.o cvLib.o Tracker.o imgSVM.o cmpLib.o nms.o caffeDet.o draw.o
+main: global.o cvLib.o Tracker.o imgSVM.o cmpLib.o nms.o caffeDet.o caffePose.o draw.o
 	${CC} -o main *.o main.cpp ${LDFLAGS} ${CXXFLAGS}  ${CXXFLAGS_FA}  ${LDFLAGS_FA}
 #  use *.o to link with all .o files, otherwise will ignore all .o files
 
@@ -32,6 +32,9 @@ nms.o:
 
 caffeDet.o:
 	g++ -c caffeDet.cpp -o caffeDet.o ${CXXFLAGS_FA}
+
+caffePose.o:
+	g++ -c caffePose.cpp -o caffePose.o ${CXXFLAGS_FA}
 
 draw.o: draw.hpp
 

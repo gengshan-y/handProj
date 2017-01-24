@@ -13,11 +13,12 @@ using namespace cv;
 class TrackingObj {
  public:
   /* Constructor */
-  TrackingObj(unsigned int objID, Mat objAppearance, Rect bBox)
+  TrackingObj(unsigned int objID, Mat frame, Rect bBox)
               : age(1), vel(0, 0), state(6, 1, CV_32F), KF(6, 4, 0),  // 6 states 
                 negNum(10) {
     ID = objID;
-    appearance = objAppearance;
+    oriFrame = frame;
+    resize(frame(bBox), appearance, Size(64, 64));
 
     /* convert rectangle to position and size */
     pos = make_pair(bBox.x + bBox.width / 2.0, bBox.y + bBox.height / 2.0);
@@ -36,6 +37,12 @@ class TrackingObj {
 
   /* Get the appearance of the object */
   Mat getAppearance();
+
+  /* Get the original frame */
+  Mat getFrame();
+
+  /* Get bounding box*/
+  Rect getBBox();
 
   /* Get position of the object */
   pair<float, float> getPos();
@@ -127,6 +134,7 @@ class TrackingObj {
   unsigned int negNum;  // sample how many negative samples in the image
 
   vector<pair<unsigned int, unsigned int>> tracklet;  // a list of tracking points
+  Mat oriFrame;  // the whole frame
 };
 
 
