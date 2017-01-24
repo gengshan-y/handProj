@@ -4,6 +4,133 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using std::string;
 
 
+/* Detect multiple images in parallel */
+void Detector::DetectImgPara(vector<cv::Mat> imgVec, vector<vector<cv::Rect>>& foundVec) {
+    vector<cv::Mat> cvResizedVec;  // store resized
+    float CONF_THRESH = 0.7;
+    float NMS_THRESH = 0.3;
+    const int  max_input_side=1000;
+    const int  min_input_side=600;
+   
+    cv::Mat cv_img;
+    cv::Rect found;
+    imgVec[0].copyTo(cv_img);
+    cv::Mat cv_new(cv_img.rows, cv_img.cols, CV_32FC3, cv::Scalar(0,0,0));
+    int max_side = max(cv_img.rows, cv_img.cols);
+    int min_side = min(cv_img.rows, cv_img.cols);
+
+    float max_side_scale = float(max_side) / float(max_input_side);
+    float min_side_scale = float(min_side) /float( min_input_side);
+    float max_scale=max(max_side_scale, min_side_scale);
+
+    float img_scale = 1;
+
+    if(max_scale > 1)
+    {
+        img_scale = float(1) / max_scale;
+    }
+
+    int height = int(cv_img.rows * img_scale);
+    int width = int(cv_img.cols * img_scale);
+    int num_out;
+    cv::Mat cv_resized;
+
+    float im_info[3];
+    float data_buf[height*width*3];
+    float *boxes = NULL;
+    float *pred = NULL;
+    float *pred_per_class = NULL;
+    float *sorted_pred_cls = NULL;
+    int *keep = NULL;
+    const float* bbox_delt;
+    const float* rois;
+    const float* pred_cls;
+    int num;
+
+
+    for (auto it = imgVec.begin(); it != imgVec.end(); it++) {
+        (*it).copyTo(cv_img);
+        for (int h = 0; h < cv_img.rows; ++h )
+        {
+            for (int w = 0; w < cv_img.cols; ++w)
+            {
+                cv_new.at<cv::Vec3f>(cv::Point(w, h))[0] = float(cv_img.at<cv::Vec3b>(cv::Point(w, h))[0])-float(102.9801);
+                cv_new.at<cv::Vec3f>(cv::Point(w, h))[1] = float(cv_img.at<cv::Vec3b>(cv::Point(w, h))[1])-float(115.9465);
+                cv_new.at<cv::Vec3f>(cv::Point(w, h))[2] = float(cv_img.at<cv::Vec3b>(cv::Point(w, h))[2])-float(122.7717);
+
+            }
+        }
+
+        cv::resize(cv_new, cv_resized, cv::Size(width, height));
+        im_info[0] = cv_resized.rows;
+        im_info[1] = cv_resized.cols;
+        im_info[2] = img_scale;
+        cvResizedVec.push_back(cv_resized);
+    }
+
+    /* move data to cpu */
+    for (int it = 0; it < imgVec.size(); it++) {
+        for (int h = 0; h < height; ++h )
+        {
+            for (int w = 0; w < width; ++w)
+            {
+                data_buf[it*3*height*width + (0*height+h)*width+w] = float(cvResizedVec[it].at<cv::Vec3f>(cv::Point(w, h))[0]);
+                data_buf[it*3*height*width + (1*height+h)*width+w] = float(cvResizedVec[it].at<cv::Vec3f>(cv::Point(w, h))[1]);
+                data_buf[it*3*height*width + (2*height+h)*width+w] = float(cvResizedVec[it].at<cv::Vec3f>(cv::Point(w, h))[2]);
+            }
+        }
+    }
+
+    net_->blob_by_name("data")->Reshape(imgVec.size(), 3, height, width);
+    net_->blob_by_name("data")->set_cpu_data(data_buf);
+    net_->blob_by_name("im_info")->set_cpu_data(im_info);
+    net_->ForwardFrom(0);
+    bbox_delt = net_->blob_by_name("bbox_pred")->cpu_data();
+    num = net_->blob_by_name("rois")->num();
+
+//** from here, modify the output and fill foundVec
+    rois = net_->blob_by_name("rois")->cpu_data();
+    pred_cls = net_->blob_by_name("cls_prob")->cpu_data();
+    boxes = new float[num*4];
+    pred = new float[num*5*class_num];
+    pred_per_class = new float[num*5];
+    sorted_pred_cls = new float[num*5];
+    keep = new int[num];
+
+    for (int n = 0; n < num; n++)
+    {
+        for (int c = 0; c < 4; c++)
+        {
+            boxes[n*4+c] = rois[n*5+c+1] / img_scale;
+        }
+    }
+
+    bbox_transform_inv(num, bbox_delt, pred_cls, boxes, pred, cv_img.rows, cv_img.cols);
+    for (int i = 1; i < class_num; i ++)
+    {
+        if (i != 15) {
+            continue;
+        }
+        for (int j = 0; j< num; j++)
+        {
+            for (int k=0; k<5; k++) {
+                pred_per_class[j*5+k] = pred[(i*num+j)*5+k];
+            }
+        }
+        boxes_sort(num, pred_per_class, sorted_pred_cls);
+        _nms(keep, &num_out, sorted_pred_cls, num, 5, NMS_THRESH, 0);
+        //for visualize only
+        getBBox(found, keep, num_out, sorted_pred_cls, CONF_THRESH);
+    }
+    // cv::imshow("detection",cv_img);
+    // cv::waitKey(1);
+    delete []boxes;
+    delete []pred;
+    delete []pred_per_class;
+    delete []keep;
+    delete []sorted_pred_cls;
+}
+
 /** Detect objects and return scores/bounding boxes.
  */
 float Detector::DetectImg(cv::Mat& cv_img, vector<cv::Rect>& found) {

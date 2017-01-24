@@ -4,7 +4,7 @@ CXXFLAGS=-g -std=c++0x -Wall `pkg-config opencv --cflags`
 # -Wall to enable all compiler's warning messages
 # c++0x partially support c++11 features
 
-LDFLAGS=`pkg-config opencv --libs`  # -g for debugging symbols
+LDFLAGS=`pkg-config opencv --libs` -lpthread # -g for debugging symbols
 
 CXXFLAGS_FA=-g -std=c++0x -Wall `pkg-config opencv cublas-7.0 cuda-7.0 cudart-7.0 --cflags`
 CXXFLAGS_FA:=${CXXFLAGS_FA} -I/home/gengshan/workDec/caffe-fast-rcnn-faster-rcnn/include -I/home/gengshan/workDec/caffe-fast-rcnn-faster-rcnn/.build_release/src

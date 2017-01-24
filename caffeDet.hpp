@@ -24,6 +24,7 @@ class Detector {
         net_->CopyTrainedLayersFrom(trained_file);
     }
     float DetectImg(cv::Mat& img, vector<cv::Rect>& found);
+    void DetectImgPara(vector<cv::Mat> imgVec, vector<vector<cv::Rect>>& foundVec);
     void bbox_transform_inv(const int num, const float* box_deltas, const float* pred_cls, float* boxes, float* pred, int img_height, int img_width);
     void vis_detections(cv::Mat image, int* keep, int num_out, float* sorted_pred_cls, float CONF_THRESH);
     void getBBox(vector<cv::Rect>& found, int* keep, int num_out, float* sorted_pred_cls, float CONF_THRESH);
