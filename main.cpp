@@ -90,7 +90,7 @@ void *poseFunc(void *args) {
     vector<TrackingObj> tracker;  // a tracker to monitor all heads
     vector<Mat> posFrameVec;
     vector<Rect> rectVec;
-    vector<unsigned int> idVec;
+    vector<int> idVec;
 
     /* Build pose estimator */
     int GPUID=0;
@@ -108,7 +108,6 @@ void *poseFunc(void *args) {
         /* get poes */
         for (unsigned int i = 0; i < trackerArray.size(); i++) {
             tracker = trackerArray[i];
-            cout << "trackerNum: " << i << endl;
             for (auto it = tracker.begin(); it != tracker.end(); it++) {
                 Mat posFrame;
                 it->getFrame().copyTo(posFrame);
@@ -121,44 +120,29 @@ void *poseFunc(void *args) {
             }
         }   
     
-        
+        /* should not change net size, so choose to pad */
         while (rectVec.size() % 5 != 0) {
             posFrameVec.push_back(posFrameVec[0]);
             rectVec.push_back(rectVec[0]);
+            idVec.push_back(-1);  // mark as non object
             cout << "padded pose input" << endl;
         }
 
         unsigned int currHead = 0;
         while (currHead + 4 < rectVec.size()) {
             vector<cv::Mat> tmpFrame(posFrameVec.begin() + currHead, posFrameVec.begin() + currHead + 5) ;
-            std::cout << tmpFrame.size() << std::endl;
             vector<cv::Rect> tmpRect(rectVec.begin() + currHead, rectVec.begin() + currHead + 5) ;
             posMach.EstimateImgPara(tmpFrame, tmpRect);
             for (unsigned int it = 0; it < tmpFrame.size(); it++) {
                 posFrameVec[currHead + it] = tmpFrame[it];
             }
             currHead += 5;
-        }   
-    
-        cout << currHead << ", " << rectVec.size() << endl;
-        
-        if (currHead < rectVec.size()) {
-            // posMach.EstimateImg(posFrame, rect);  // for front3 199, very good for front pose
-            vector<cv::Mat> tmpFrame(posFrameVec.begin() + currHead, posFrameVec.end()) ;
-            std::cout << tmpFrame.size() << std::endl;
-            vector<cv::Rect> tmpRect(rectVec.begin() + currHead, rectVec.end()) ;
-            std::cout << tmpRect.size() << std::endl;
-            posMach.EstimateImgPara(tmpFrame, tmpRect);
-            for (unsigned int it = 0; it < tmpFrame.size(); it++) {
-                posFrameVec[currHead + it] = tmpFrame[it];
-            }
         }
-        
-        
+   
         for (unsigned int i = 0; i < posFrameVec.size(); i++) {
                 /* show pose results */
-                if (param == "y") {
-                    // imshow("pose " + to_string(idVec[i]), posFrameVec[i]);
+                if (param == "y" && idVec[i] >= 0) {
+                    imshow("pose " + to_string(idVec[i]), posFrameVec[i]);
                     pauseFrame(100);
                 }
                 else {
@@ -216,7 +200,7 @@ int main(int argc, char* argv[]) {
             targetVid >> frame;
             if(frame.empty()) {return -1;}
 
-            if (count % 10 != 0) {continue;}
+            if (count % 3 != 0) {continue;}
 
             /* get frame progress */
             sprintf(countStr, "%04d", count);  // padding with zeros

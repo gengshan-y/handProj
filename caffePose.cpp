@@ -76,7 +76,6 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
         }
         net_->blob_by_name("data")->set_cpu_data(data_buf);  // should be here
         net_->ForwardFrom(0);
-        std::cout << "line 79" << std::endl;
         data_res = net_->blob_by_name("Mconv5_stage6")->cpu_data();
         for (unsigned int it = 0; it < imgVec.size(); it++) {
             dataSum(dataAggre+it*46*46*15, data_res+it*46*46*15);
@@ -102,7 +101,6 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
 
     // filter esitmation points using likelihood
     for (unsigned int i = 0; i < batchSize; i++) {
-    std::cout << "for image " << i << std::endl;
     unsigned int N = 46*46;
     vector<int> resIdx(N);
     for(unsigned int it = 0; it < N; it++) {
