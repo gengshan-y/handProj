@@ -230,8 +230,7 @@ Mat combImgs(Mat img1, Mat img2) {
 
 float meaStateDis(vector<float> meaArray, vector<float> predArray) {
   float score = 0;
-  // float posDist = pow(meaArray[0] - predArray[0], 2) +\
-                  pow(meaArray[1] - predArray[1], 2);
+  // float posDist = pow(meaArray[0] - predArray[0], 2) +\ pow(meaArray[1] - predArray[1], 2);
   Rect r1(meaArray[0] - meaArray[4]/2., meaArray[1] - meaArray[5]/2., \
           meaArray[4], meaArray[5]);
   Rect r2(predArray[0] - predArray[4]/2., predArray[1] - predArray[5]/2., \

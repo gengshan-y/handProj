@@ -21,15 +21,15 @@ class PoseMachine {
         net_ = boost::shared_ptr<Net<float> >(new Net<float>(model_file, 
                                                              caffe::TEST));
         net_->CopyTrainedLayersFrom(trained_file);
-        net_->blob_by_name("data")->Reshape(1, 4, 368, 368);  // fit net input
-        net_->blob_by_name("data")->set_cpu_data(data_buf);
     }
     void Estimate(const string& im_name, cv::Rect rect);
     void EstimateImg(cv::Mat& img, cv::Rect rect);
+    void EstimateImgPara(vector<cv::Mat>& imgVec, vector<cv::Rect> rectVec);
 
  private:
+    void parseRes(const float* data_res, float* res);
     boost::shared_ptr<Net<float> > net_;
-    float data_buf[368*368*4];  // net input 
+    float *data_buf;  // net input 
     PoseMachine(){}
     void Preprocess(cv::Mat img, float* data_buf);
     void dataSum(float* dataAggre, const float* data_res);

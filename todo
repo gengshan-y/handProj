@@ -1,4 +1,6 @@
-- pose find maximum vector
-- add pose
+pose not available:
+    use parameter to control batch size
+    identify pose iD
+
 - add simanse feature
 - batch

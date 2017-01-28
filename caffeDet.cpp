@@ -4,7 +4,7 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using std::string;
 
 
-/* Detect multiple images in parallel */
+/* Detect multiple images in parallel, aborted */
 void Detector::DetectImgPara(vector<cv::Mat> imgVec, vector<vector<cv::Rect>>& foundVec) {
     vector<cv::Mat> cvResizedVec;  // store resized
     float CONF_THRESH = 0.7;
@@ -13,7 +13,7 @@ void Detector::DetectImgPara(vector<cv::Mat> imgVec, vector<vector<cv::Rect>>& f
     const int  min_input_side=600;
    
     cv::Mat cv_img;
-    cv::Rect found;
+    vector<cv::Rect> found;
     imgVec[0].copyTo(cv_img);
     cv::Mat cv_new(cv_img.rows, cv_img.cols, CV_32FC3, cv::Scalar(0,0,0));
     int max_side = max(cv_img.rows, cv_img.cols);
@@ -36,7 +36,9 @@ void Detector::DetectImgPara(vector<cv::Mat> imgVec, vector<vector<cv::Rect>>& f
     cv::Mat cv_resized;
 
     float im_info[3];
-    float data_buf[height*width*3];
+    // float data_buf[height*width*3];
+    float *data_buf = NULL;
+    data_buf = (float*) malloc(sizeof(float) * 10*height*width*3);
     float *boxes = NULL;
     float *pred = NULL;
     float *pred_per_class = NULL;
@@ -69,19 +71,19 @@ void Detector::DetectImgPara(vector<cv::Mat> imgVec, vector<vector<cv::Rect>>& f
     }
 
     /* move data to cpu */
-    for (int it = 0; it < imgVec.size(); it++) {
+    for (unsigned int it = 0; it < imgVec.size(); it++) {
         for (int h = 0; h < height; ++h )
         {
-            for (int w = 0; w < width; ++w)
-            {
+            for (int w = 0; w < width; ++w) {
                 data_buf[it*3*height*width + (0*height+h)*width+w] = float(cvResizedVec[it].at<cv::Vec3f>(cv::Point(w, h))[0]);
                 data_buf[it*3*height*width + (1*height+h)*width+w] = float(cvResizedVec[it].at<cv::Vec3f>(cv::Point(w, h))[1]);
                 data_buf[it*3*height*width + (2*height+h)*width+w] = float(cvResizedVec[it].at<cv::Vec3f>(cv::Point(w, h))[2]);
+                
             }
         }
     }
 
-    net_->blob_by_name("data")->Reshape(imgVec.size(), 3, height, width);
+    net_->blob_by_name("data")->Reshape(10, 3, height, width);
     net_->blob_by_name("data")->set_cpu_data(data_buf);
     net_->blob_by_name("im_info")->set_cpu_data(im_info);
     net_->ForwardFrom(0);
