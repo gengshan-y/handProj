@@ -12,55 +12,26 @@ using namespace cv;
 vector<Mat> frameArray;  // frame for parallism
 vector<vector<Rect>> foundArray;
 vector<vector<TrackingObj>> trackerArray;  // a tracker to monitor all heads
-pthread_t detThread;
 pthread_t trkThread;
 pthread_t poseThread;
-pthread_mutex_t frameMutex;
-pthread_mutex_t detMutex;
-pthread_mutex_t trkMutex;
 
-pthread_mutex_t frameLock;
-pthread_mutex_t detLock;
+pthread_mutex_t detSema;   // as semaphore
+pthread_mutex_t trkSema;
+
+pthread_mutex_t frameLock;  // as mutex
 pthread_mutex_t trkLock;
 
 string param;
 
-void *detFunc(void *args) {
-    /* Initialization */
-    vector<Rect> found;  // to store detection results
-
-    // Build detector
-    string model_file = "/home/gengshan/workDec/threadProc/model/faster_rcnn_test.pt";
-    string weights_file = "/home/gengshan/workDec/threadProc/model/VGG16_faster_rcnn_final.caffemodel";
-    int GPUID=0;
-    Caffe::SetDevice(GPUID);
-    Caffe::set_mode(Caffe::GPU);
-    Detector caffeDet = Detector(model_file, weights_file);
-
-    while(1) {
-        pthread_mutex_lock(&frameMutex);
-        pthread_mutex_lock(&detLock);
-        // detect and store
-        foundArray.clear();  // clear rectangles
-        for (auto it = frameArray.begin(); it != frameArray.end(); it++) {
-            caffeDet.DetectImg(*it, found);
-            foundArray.push_back(found);
-        }     
-        pthread_mutex_unlock(&detMutex);  // signal tracking
-    }
-    return NULL;
-}
-
 void *trkFunc(void *args) {
-    
-    /* Initialization */
+    // Initialization
     Mat trkFrame;  // should be a new object if using push
     vector<TrackingObj> tracker;  // a tracker to monitor all heads
 
-    /* tracking */
+    // Tracking
     while(1) {
-        pthread_mutex_lock(&trkLock);
-        pthread_mutex_lock(&detMutex);  // wait for detection
+        pthread_mutex_lock(&detSema);  // wait for detection
+        pthread_mutex_lock(&trkLock);  // lock trk result
         trackerArray.clear();
         for (unsigned int it = 0; it < frameArray.size(); it++) {
             frameArray[it].copyTo(trkFrame);
@@ -77,22 +48,21 @@ void *trkFunc(void *args) {
             }
         }
 
-        pthread_mutex_unlock(&trkMutex);  // signal pose
-        pthread_mutex_unlock(&detLock);  // signal det
-        pthread_mutex_unlock(&frameLock);  // signal frame
+        pthread_mutex_unlock(&trkSema);  // signal pose
+        pthread_mutex_unlock(&frameLock);  // signal fetch and det
 
     }
     return NULL;
 }
 
 void *poseFunc(void *args) {
-    /* Initialization */
+    // Initialization
     vector<TrackingObj> tracker;  // a tracker to monitor all heads
     vector<Mat> posFrameVec;
     vector<Rect> rectVec;
     vector<int> idVec;
 
-    /* Build pose estimator */
+    // Build pose estimator
     int GPUID=0;
     Caffe::SetDevice(GPUID);
     Caffe::set_mode(Caffe::GPU);
@@ -101,11 +71,11 @@ void *poseFunc(void *args) {
     PoseMachine posMach = PoseMachine(model_file, weights_file);
     
     while(1) {
-        pthread_mutex_lock(&trkMutex);
+        pthread_mutex_lock(&trkSema);
         posFrameVec.clear();
         rectVec.clear();
         idVec.clear();
-        /* get poes */
+        // get poes
         for (unsigned int i = 0; i < trackerArray.size(); i++) {
             tracker = trackerArray[i];
             for (auto it = tracker.begin(); it != tracker.end(); it++) {
@@ -120,7 +90,7 @@ void *poseFunc(void *args) {
             }
         }   
     
-        /* should not change net size, so choose to pad */
+        // should not change net size, so choose to pad
         while (rectVec.size() % 5 != 0) {
             posFrameVec.push_back(posFrameVec[0]);
             rectVec.push_back(rectVec[0]);
@@ -158,6 +128,7 @@ void *poseFunc(void *args) {
     return NULL;
 }
 
+
 int main(int argc, char* argv[]) {
     /* Basic info */
     if (argc != 3) {
@@ -166,22 +137,29 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
     cout << "OpenCV version " << CV_VERSION << endl;
+    param = string(argv[2]);    
 
-    /* Initialization */
+    /* Create threads */
+    pthread_mutex_lock(&detSema);
+    pthread_mutex_lock(&trkSema);
+    pthread_create(&trkThread, NULL, trkFunc, NULL);
+    pthread_create(&poseThread, NULL, poseFunc, NULL);
+
+    /* Main thread for fetch and detection */
+    // Initialization
     unsigned int count = 170;  // initialize the fist frame to be decoded, 80
     Mat frame;  // to store video frames
     vector<Rect> found;  // to store detection results
-    param = string(argv[2]);    
- 
-    /* Create threads */
-    pthread_mutex_lock(&frameMutex);
-    pthread_mutex_lock(&detMutex);
-    pthread_mutex_lock(&trkMutex);
-    pthread_create(&detThread, NULL, detFunc, NULL);
-    pthread_create(&trkThread, NULL, trkFunc, NULL);
-    pthread_create(&poseThread, NULL, poseFunc, NULL);
- 
-    /* Read in frames and process */
+
+    // Build detector
+    string model_file = "/home/gengshan/workDec/threadProc/model/faster_rcnn_test.pt";
+    string weights_file = "/home/gengshan/workDec/threadProc/model/VGG16_faster_rcnn_final.caffemodel";
+    int GPUID=0;
+    Caffe::SetDevice(GPUID);
+    Caffe::set_mode(Caffe::GPU);
+    Detector caffeDet = Detector(model_file, weights_file);
+
+    // Read in frames and process
     VideoCapture targetVid(argv[1]);
     if(!targetVid.isOpened()) {
         cout << "open failed." << endl;
@@ -189,41 +167,41 @@ int main(int argc, char* argv[]) {
     }
     unsigned int totalFrame = targetVid.get(CV_CAP_PROP_FRAME_COUNT);
 
-    /* Set current to a pre-defined frame */
+    // Set current to a pre-defined frame
     targetVid.set(CV_CAP_PROP_POS_FRAMES, count);
 
     for(;;) {
-        pthread_mutex_lock(&frameLock);  // protect frameArray
+        pthread_mutex_lock(&frameLock);  // lock frame and detection results
         frameArray.clear();  // clear before using
-        while (frameArray.size() < 10) {
+        foundArray.clear();  // clear rectangles
+
+        // for a batch of 10 frames
+        while (frameArray.size() < 10) {             
             count++;
             targetVid >> frame;
             if(frame.empty()) {return -1;}
 
-            if (count % 3 != 0) {continue;}
+            // if (count % 3 != 0) {continue;}  // skip some frames
 
-            /* get frame progress */
+            // get frame count
             sprintf(countStr, "%04d", count);  // padding with zeros
             cout << "------------------------------------------" 
                  << "------------------------------------------" << endl;
             cout << "frame\t" << countStr << "/" << totalFrame << endl;
        
-            /* process a frame */
+            // pre-process a frame
             resize(frame, frame, imgSize);  // set to same-scale as train
-            frameArray.push_back(frame);
-            cout << frameArray.size() << endl;
-        }
-        pthread_mutex_unlock(&frameMutex);  // signal detection
-        
-        /* draw bounding box
-        Mat detFrame;
-        frame.copyTo(detFrame);
-        drawBBox(found, detFrame);
-        */
 
-        /* save cropped image */
-        // svCroppedImg(found, frame);
+            // detect and store
+            caffeDet.DetectImg(frame, found);
+
+            // add to buffer
+            frameArray.push_back(frame);
+            foundArray.push_back(found);
+        }
     
+        pthread_mutex_unlock(&detSema);  // signal tracking thread
+        
     }
     
     return 0;

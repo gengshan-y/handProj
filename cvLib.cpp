@@ -8,7 +8,8 @@ using namespace cv;
 const char* detectorPath = "./HogDetector.txt";  // const char* for input file 
 
 /* for resizing image */
-const Size imgSize = Size(360, 640);  // resized image size 
+// const Size imgSize = Size(360, 640);  // resized image size 
+const Size imgSize = Size(960, 540);  // resized image size 
 
 /* global current frame to store results */
 char countStr [50];
