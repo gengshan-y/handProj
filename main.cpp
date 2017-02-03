@@ -30,18 +30,21 @@ void *trkFunc(void *args) {
 
     // Tracking
     while(1) {
+        vector<TrackingObj> tmpTracker;  // to store curr tracking res for disp
         pthread_mutex_lock(&detSema);  // wait for detection
         pthread_mutex_lock(&trkLock);  // lock trk result
         trackerArray.clear();
         for (unsigned int it = 0; it < frameArray.size(); it++) {
-            frameArray[it].copyTo(trkFrame);
-            updateTracker(foundArray[it], trkFrame, tracker);
-            trackerArray.push_back(tracker);
+            updateTracker(foundArray[it], frameArray[it], tracker);
+            tmpTracker = tracker;
+            trackerArray.push_back(tmpTracker);
 
             /* show tracking results */
             if (param == "y") {
+                frameArray[it].copyTo(trkFrame);
+                resize(trkFrame, trkFrame, Size(), 0.5, 0.5);
                 imshow("tracking", trkFrame);
-                pauseFrame(1);
+                pauseFrame(0);
             }
             else {
                 imwrite(outputPath + string(countStr) + ".jpg", trkFrame);
@@ -50,7 +53,6 @@ void *trkFunc(void *args) {
 
         pthread_mutex_unlock(&trkSema);  // signal pose
         pthread_mutex_unlock(&frameLock);  // signal fetch and det
-
     }
     return NULL;
 }
@@ -83,10 +85,10 @@ void *poseFunc(void *args) {
                 it->getFrame().copyTo(posFrame);
                 Rect rect = it->getBBox();
                 // cout << rect.x << " " << rect.y << " " << rect.width << " " << rect.height << endl;
-                cout << "@@pose " << it->getID() << endl;
+                cout << "@@pose of ID " << it->getID() << endl;
                 posFrameVec.push_back(posFrame);
                 rectVec.push_back(rect);
-                idVec.push_back(it->getID());        
+                idVec.push_back(it->getID()); 
             }
         }   
     
@@ -113,7 +115,7 @@ void *poseFunc(void *args) {
                 /* show pose results */
                 if (param == "y" && idVec[i] >= 0) {
                     imshow("pose " + to_string(idVec[i]), posFrameVec[i]);
-                    pauseFrame(100);
+                    pauseFrame(0);
                 }
                 else {
                     // imwrite(outputPath + string(countStr) + ".jpg", posFrame);
@@ -147,8 +149,7 @@ int main(int argc, char* argv[]) {
 
     /* Main thread for fetch and detection */
     // Initialization
-    unsigned int count = 170;  // initialize the fist frame to be decoded, 80
-    Mat frame;  // to store video frames
+    unsigned int count = 1;  // initialize the fist frame to be decoded, 80
     vector<Rect> found;  // to store detection results
 
     // Build detector
@@ -177,6 +178,8 @@ int main(int argc, char* argv[]) {
 
         // for a batch of 10 frames
         while (frameArray.size() < 10) {             
+            Mat detFrame;  // frame to store detection results
+            Mat frame;  // to store video frames, should be re-constructed
             count++;
             targetVid >> frame;
             if(frame.empty()) {return -1;}
@@ -190,7 +193,7 @@ int main(int argc, char* argv[]) {
             cout << "frame\t" << countStr << "/" << totalFrame << endl;
        
             // pre-process a frame
-            resize(frame, frame, imgSize);  // set to same-scale as train
+            resize(frame, frame, Size(), 1, 1);  // set to same-scale as train
 
             // detect and store
             caffeDet.DetectImg(frame, found);
@@ -198,6 +201,13 @@ int main(int argc, char* argv[]) {
             // add to buffer
             frameArray.push_back(frame);
             foundArray.push_back(found);
+    
+            // show detection results
+            frame.copyTo(detFrame);            
+            drawBBox(found, detFrame);
+            resize(detFrame, detFrame, Size(), 0.5, 0.5);
+            imshow("detection", detFrame);
+            pauseFrame(0);
         }
     
         pthread_mutex_unlock(&detSema);  // signal tracking thread

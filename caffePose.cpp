@@ -6,9 +6,11 @@ using std::string;
 /* Parse pose estimation results */
 void PoseMachine::parseRes(const float* data_res, float* res) {
     for (int k = 0; k < 14; k++) {  // 15 is the background
+        /*
         if (k != 7 && k != 4) {  // 4 and 7 for l/r wrists
             continue;
         }
+        */
         for (int j = 0; j < 46; j++) {
             for (int i = 0; i < 46; i++) {
                 res[46*j+i] += data_res[46*46*k+46*j+i];
@@ -42,8 +44,8 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
     int top, down, left, right;
     float scale;
 
-    int arraySize = 1;
-    float sizeArray[1] = {500};
+    int arraySize = 2;
+    float sizeArray[2] = {600, 900};
 
     //int arraySize = 2;
     //float sizeArray[2] = {200, 500};
@@ -101,28 +103,29 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
 
     // filter esitmation points using likelihood
     for (unsigned int i = 0; i < batchSize; i++) {
-    unsigned int N = 46*46;
-    vector<int> resIdx(N);
-    for(unsigned int it = 0; it < N; it++) {
-        resIdx[it] = it;
-    }
-    sort(resIdx.begin(), resIdx.end(),
-         [&](int x, int y){return res[x + i*46*46] > res[y+i*46*46];});  // sort in reverse order
+        unsigned int N = 46*46;
+        vector<int> resIdx(N);
+        for(unsigned int it = 0; it < N; it++) {
+            resIdx[it] = it;
+        }
+        sort(resIdx.begin(), resIdx.end(),
+             [&](int x, int y){return res[x + i*46*46] > res[y+i*46*46];});  // sort in reverse order
 
-    // print out content:
-    vector<std::tuple<int, int, float>> respVec;
-    for (auto it=resIdx.begin(); it!=resIdx.end() && res[*it] > 0.2; ++it) {
-        std::tuple<int, int, float> respPoint((*it)/46, (*it)%46, res[*it + i*46*46]);
-        respVec.push_back(respPoint);
-    }
+        // print out content:
+        vector<std::tuple<int, int, float>> respVec;
+        for (auto it=resIdx.begin(); it!=resIdx.end() && res[*it] > 0.4; ++it) {
+            std::tuple<int, int, float> respPoint((*it)/46, (*it)%46, res[*it + i*46*46]);
+            respVec.push_back(respPoint);
+        }
 
-    for (auto it = respVec.begin(); it != respVec.end(); it++) {
-        int xPoint = (-left + 8*std::get<0>(*it)) / scale;
-        int yPoint = (-top + 8*std::get<1>(*it)) / scale;
-        float pPoint = std::get<2>(*it);
-        std::cout << xPoint << ", " << yPoint << ", " << pPoint << std::endl;
-        cv::circle(imgVec[i], cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0),int(pPoint*10));
-    }
+        std::cout << "@@pose for image " << i << std::endl;
+        for (auto it = respVec.begin(); it != respVec.end(); it++) {
+            int xPoint = (-left + 8*std::get<0>(*it)) / scale;
+            int yPoint = (-top + 8*std::get<1>(*it)) / scale;
+            float pPoint = std::get<2>(*it);
+            std::cout << "(" << xPoint << ", " << yPoint << ") p=" << pPoint << std::endl;
+            cv::circle(imgVec[i], cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0),int(pPoint*10));
+        }
     }
 }
 
@@ -242,8 +245,10 @@ void PoseMachine::Preprocess(cv::Mat img, float* data_buf) {
     
     img = img.t();    
 
-    // cv::imshow("demo", img);
-    // cv::waitKey(0);
+    /*
+    cv::imshow("demo", img);
+    cv::waitKey(0);
+    */
 
     /*  build center image */
     cv::Mat centerImg(img.rows, img.cols, CV_32FC1, cv::Scalar(0));

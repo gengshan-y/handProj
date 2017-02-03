@@ -7,16 +7,9 @@ using namespace cv;
 /* for building detector */
 const char* detectorPath = "./HogDetector.txt";  // const char* for input file 
 
-/* for resizing image */
-// const Size imgSize = Size(360, 640);  // resized image size 
-const Size imgSize = Size(960, 540);  // resized image size 
-
 /* global current frame to store results */
 char countStr [50];
 unsigned int currID = 0;
-
-unsigned int upAccum = 0;
-unsigned int downAccum = 0;
 
 string appearancePath = "/data/gengshan/hdTracking/";
 string outputPath = "/data/gengshan/handProj/";
@@ -106,15 +99,16 @@ void updateTracker(vector<Rect> found, Mat& targImg,
     // testStateParsing(meaObjs[0]);  // test the parsing interface
 
     /* Update/Add tracking objects */
+    cout << "@@data association" << endl;
+    vector<TrackingObj> lastTracker = tracker;  // save for association
     for (auto it = meaObjs.begin(); it != meaObjs.end(); it++) {
-        cout << "@@comparing stage" << endl;
         /* get measured state */
         cout << "measured..." << endl;
         (*it).showState();
         vector<float> meaArray = (*it).getStateVec();
 
         vector<float> scoreArr;  // to store the comparison scores 
-        for (auto itt = tracker.begin(); itt != tracker.end(); itt++) {
+        for (auto itt = lastTracker.begin(); itt != lastTracker.end(); itt++) {
             /* get tracker predicted state */
             cout << "predicted..." << endl; 
             (*itt).showState();
@@ -145,7 +139,6 @@ void updateTracker(vector<Rect> found, Mat& targImg,
         if (scoreArr.size() != 0 && scoreArr[targIdx] > 0.5) {
             cout << "**ID " << tracker[targIdx].getID() << " updated" << endl;
             /* update the according tracker */
-
             // update tracklet
             tracker[targIdx].updateTracklet( (*it).getPos() );
             drawObj.drawTracklet(targImg, tracker[targIdx].getID(), 
@@ -173,17 +166,9 @@ void updateTracker(vector<Rect> found, Mat& targImg,
 
     /* Remove outdated objects */
     for (int it = tracker.size() - 1; it >= 0; it--) {
-        if ( (tracker[it]).getAge() > 10 ) {
+        if ( (tracker[it]).getAge() > 20 ) {  // set age as 20
             cout << "$$ID " << tracker[it].getID() << " to be deleted." << endl;
-            // report an up-down direction to global counter
-            if ( (*(tracker.begin() + it)).getDirection() ) {
-                cout << "down" << endl;
-                downAccum++;
-            }
-            else {
-                cout << "up" << endl;
-                upAccum++;
-            }
+            
             // delete SVM for it
             (*(tracker.begin() + it)).rmSVM();
 

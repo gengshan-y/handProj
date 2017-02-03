@@ -14,14 +14,9 @@
 /* Global vars for tracking */
 extern const char* detectorPath;  // const char* for input file 
 
-extern const Size imgSize;  // resized image size 
-
 extern char countStr [50];  // global current frame to store results
 extern unsigned int currID;  // current object ID, declare with extern and 
                              // define in .cpp to avoid multiple definition
-
-extern unsigned int upAccum;  // accumulator for up-down-counting
-extern unsigned int downAccum;
 
 extern string appearancePath;  // to store tracking object appearance
 extern string outputPath;  // to store large output images

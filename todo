@@ -1,6 +1,9 @@
 ./main /data/gengshan/MOT16-09.mp4 y
 
+- save pose in tracker
+- draw pose
 - clean code
 - get good results on MOT16-9
+- test torch lrcn code? clean neuraltalk?
 - add simanse feature
 
