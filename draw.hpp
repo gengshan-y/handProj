@@ -29,7 +29,7 @@ class objDraw {
 
   /* Draw tracklet of tracker in current frame */
   void drawTracklet(Mat frame, unsigned int ID, 
-                    vector<pair<unsigned int, unsigned int>> tracklet) const;
+                    vector<pair<unsigned int, unsigned int> > tracklet) const;
   // should use const, since created as global const object, to avoid modification
 
  private:

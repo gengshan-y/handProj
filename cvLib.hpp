@@ -3,7 +3,6 @@
 
 #include "draw.hpp"
 #include "Tracker.hpp"
-#include "cmpLib.hpp"
 #include <fstream>
 #include <opencv2/opencv.hpp>
 
@@ -12,20 +11,12 @@
 #define mMin(a, b) (((a)<(b)) ? (a) :(b))
 
 /* Global vars for tracking */
-extern const char* detectorPath;  // const char* for input file 
-
 extern char countStr [50];  // global current frame to store results
 extern unsigned int currID;  // current object ID, declare with extern and 
                              // define in .cpp to avoid multiple definition
 
-extern string appearancePath;  // to store tracking object appearance
-extern string outputPath;  // to store large output images
-
 /* Pause current frame */
 void pauseFrame(unsigned int milliSeconds);
-
-/* Build detecotr from training result */
-void buildDetector(HOGDescriptor& hog, const char* detectorPath);
 
 /* remove inner boxes */
 vector<Rect> rmInnerBoxes(vector<Rect> found);

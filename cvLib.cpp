@@ -4,15 +4,9 @@ using namespace std;
 using namespace cv;
 
 /* Define a list variables */
-/* for building detector */
-const char* detectorPath = "./HogDetector.txt";  // const char* for input file 
-
 /* global current frame to store results */
 char countStr [50];
 unsigned int currID = 0;
-
-string appearancePath = "/data/gengshan/hdTracking/";
-string outputPath = "/data/gengshan/handProj/";
 
 void pauseFrame(unsigned int milliSeconds) {
     char key = (char) waitKey(milliSeconds);
@@ -24,29 +18,6 @@ void pauseFrame(unsigned int milliSeconds) {
     default:
         return;  // go on
     }
-}
-
-void buildDetector(HOGDescriptor& hog, const char* detectorPath) {
-    /* Loading detector */
-    /* loading file*/
-    ifstream detFile(detectorPath, ios::binary);
-    if (!detFile.is_open()) {
-        cout << "HogDetector open failed." << endl;
-        exit(-1);
-    }
-    detFile.seekg(0, ios_base::beg);
-
-    vector<float> x;  // for constructing SVM
-    float tmpVal = 0.0f;
-    while (!detFile.eof()) {
-        detFile >> tmpVal;
-        x.push_back(tmpVal);
-    }
-    detFile.close();
-    // cout << x.size() << " paramters loaded." << endl;
-
-    /* constructing detector*/
-    hog.setSVMDetector(x);
 }
 
 /* remove inner boxes */

@@ -13,3 +13,10 @@ const CvSize cellSize = cvSize(8, 8);     //cell size, fixed
 const int nbins = 9;  // number of direction bins, fixed 
 
 const objDraw drawObj = objDraw();
+
+/* For global configurations */
+const Parameters *hp = NULL;
+
+/* For image output */
+string appearancePath = "/data/gengshan/hdTracking/";  // not activated
+string outputPath = "/data/gengshan/handProj/";

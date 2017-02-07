@@ -1,9 +1,10 @@
-#include <iostream>
-#include "global.hpp"
-#include "Tracker.hpp"
 #include "cvLib.hpp"
 #include "caffeDet.hpp"
 #include "caffePose.hpp"
+#include "global.hpp"
+#include "parameters.hpp"
+#include "Tracker.hpp"
+#include <iostream>
 #include <pthread.h>
 
 using namespace std;
@@ -21,39 +22,38 @@ pthread_mutex_t trkSema;
 pthread_mutex_t frameLock;  // as mutex
 pthread_mutex_t trkLock;
 
-string param;
 
 void *trkFunc(void *args) {
-    // Initialization
-    Mat trkFrame;  // should be a new object if using push
-    vector<TrackingObj> tracker;  // a tracker to monitor all heads
+  // Initialization
+  Mat trkFrame;  // should be a new object if using push
+  vector<TrackingObj> tracker;  // a tracker to monitor all heads
 
-    // Tracking
-    while(1) {
-        vector<TrackingObj> tmpTracker;  // to store curr tracking res for disp
-        pthread_mutex_lock(&detSema);  // wait for detection
-        pthread_mutex_lock(&trkLock);  // lock trk result
-        trackerArray.clear();
-        for (unsigned int it = 0; it < frameArray.size(); it++) {
-            updateTracker(foundArray[it], frameArray[it], tracker);
-            tmpTracker = tracker;
-            trackerArray.push_back(tmpTracker);
+  // Tracking
+  while(1) {
+    vector<TrackingObj> tmpTracker;  // to store curr tracking res for disp
+    pthread_mutex_lock(&detSema);  // wait for detection
+    pthread_mutex_lock(&trkLock);  // lock trk result
+    trackerArray.clear();
+    for (unsigned int it = 0; it < frameArray.size(); it++) {
+      updateTracker(foundArray[it], frameArray[it], tracker);
+      tmpTracker = tracker;
+      trackerArray.push_back(tmpTracker);
 
-            /* show tracking results */
-            if (param == "y") {
-                frameArray[it].copyTo(trkFrame);
-                resize(trkFrame, trkFrame, Size(), 0.5, 0.5);
-                imshow("tracking", trkFrame);
-                pauseFrame(0);
-            }
-            else {
-                imwrite(outputPath + string(countStr) + ".jpg", trkFrame);
-            }
-        }
-
-        pthread_mutex_unlock(&trkSema);  // signal pose
-        pthread_mutex_unlock(&frameLock);  // signal fetch and det
+      /* show tracking results */
+      frameArray[it].copyTo(trkFrame);
+      if (hp->readStringParameter("Conf.disp") == "y") {
+        resize(trkFrame, trkFrame, Size(), 0.5, 0.5);
+        imshow("tracking", trkFrame);
+        pauseFrame(hp->readIntParameter("Conf.pauseMs"));
+      }
+      else {
+        imwrite(outputPath + "trk_" +  string(countStr) + ".jpg", trkFrame);
+      }
     }
+
+    pthread_mutex_unlock(&trkSema);  // signal pose
+    pthread_mutex_unlock(&frameLock);  // signal fetch and det
+  }
     return NULL;
 }
 
@@ -63,10 +63,11 @@ void *poseFunc(void *args) {
     vector<Mat> posFrameVec;
     vector<Rect> rectVec;
     vector<int> idVec;
+    Mat poseFrame;
+    int batchSize = 1;
 
     // Build pose estimator
-    int GPUID=0;
-    Caffe::SetDevice(GPUID);
+    Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
     Caffe::set_mode(Caffe::GPU);
     string model_file = "/home/gengshan/workDec/threadProc/model/pose_deploy_centerMap.prototxt";
     string weights_file = "/home/gengshan/workDec/threadProc/model/pose_iter_985000_addLEEDS.caffemodel";
@@ -93,7 +94,7 @@ void *poseFunc(void *args) {
         }   
     
         // should not change net size, so choose to pad
-        while (rectVec.size() % 5 != 0) {
+        while (rectVec.size() % batchSize != 0) {
             posFrameVec.push_back(posFrameVec[0]);
             rectVec.push_back(rectVec[0]);
             idVec.push_back(-1);  // mark as non object
@@ -101,28 +102,30 @@ void *poseFunc(void *args) {
         }
 
         unsigned int currHead = 0;
-        while (currHead + 4 < rectVec.size()) {
-            vector<cv::Mat> tmpFrame(posFrameVec.begin() + currHead, posFrameVec.begin() + currHead + 5) ;
-            vector<cv::Rect> tmpRect(rectVec.begin() + currHead, rectVec.begin() + currHead + 5) ;
+        while (currHead + batchSize - 1 < rectVec.size()) {
+            vector<cv::Mat> tmpFrame(posFrameVec.begin() + currHead, 
+                                posFrameVec.begin() + currHead + batchSize) ;
+            vector<cv::Rect> tmpRect(rectVec.begin() + currHead, 
+                                rectVec.begin() + currHead + batchSize) ;
             posMach.EstimateImgPara(tmpFrame, tmpRect);
             for (unsigned int it = 0; it < tmpFrame.size(); it++) {
                 posFrameVec[currHead + it] = tmpFrame[it];
             }
-            currHead += 5;
+            currHead += batchSize;
         }
    
         for (unsigned int i = 0; i < posFrameVec.size(); i++) {
                 /* show pose results */
-                if (param == "y" && idVec[i] >= 0) {
-                    imshow("pose " + to_string(idVec[i]), posFrameVec[i]);
-                    pauseFrame(0);
+                posFrameVec[i].copyTo(poseFrame);
+                if (hp->readStringParameter("Conf.disp") == "y" && idVec[i] >= 0) {
+                    resize(poseFrame, poseFrame, Size(), 0.5, 0.5);
+                    imshow("pose " + to_string(idVec[i]), poseFrame);
+                    pauseFrame(hp->readIntParameter("Conf.pauseMs"));
                 }
                 else {
-                    // imwrite(outputPath + string(countStr) + ".jpg", posFrame);
+                    imwrite(outputPath + "pose_" + to_string(idVec[i]) + 
+                            "_" + string(countStr) + ".jpg", poseFrame);
                 }
-
-                // imshow("pose " + to_string(it->getID()), posFrame);
-                // imwrite(outputPath + "pose_" + to_string(it->getID()) + "_" + string(countStr) + ".jpg", posFrame);   
         }
        
         pthread_mutex_unlock(&trkLock);  // signal tracking
@@ -133,13 +136,13 @@ void *poseFunc(void *args) {
 
 int main(int argc, char* argv[]) {
     /* Basic info */
-    if (argc != 3) {
-        cout << "./main input-vid-path " 
-             << "display-result[y/n]" << endl;
+    if (argc != 2) {
+        cout << "./main config-file" << endl;
         exit(-1);
     }
     cout << "OpenCV version " << CV_VERSION << endl;
-    param = string(argv[2]);    
+    string paramFileName = string(argv[1]);    
+    hp = new Parameters(paramFileName);
 
     /* Create threads */
     pthread_mutex_lock(&detSema);
@@ -155,13 +158,12 @@ int main(int argc, char* argv[]) {
     // Build detector
     string model_file = "/home/gengshan/workDec/threadProc/model/faster_rcnn_test.pt";
     string weights_file = "/home/gengshan/workDec/threadProc/model/VGG16_faster_rcnn_final.caffemodel";
-    int GPUID=0;
-    Caffe::SetDevice(GPUID);
+    Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
     Caffe::set_mode(Caffe::GPU);
     Detector caffeDet = Detector(model_file, weights_file);
 
     // Read in frames and process
-    VideoCapture targetVid(argv[1]);
+    VideoCapture targetVid(hp->readStringParameter("Conf.vidPath"));
     if(!targetVid.isOpened()) {
         cout << "open failed." << endl;
         exit(-1);
@@ -177,7 +179,7 @@ int main(int argc, char* argv[]) {
         foundArray.clear();  // clear rectangles
 
         // for a batch of 10 frames
-        while (frameArray.size() < 10) {             
+        while (frameArray.size() < 1) {             
             Mat detFrame;  // frame to store detection results
             Mat frame;  // to store video frames, should be re-constructed
             count++;
@@ -196,7 +198,10 @@ int main(int argc, char* argv[]) {
             resize(frame, frame, Size(), 1, 1);  // set to same-scale as train
 
             // detect and store
-            caffeDet.DetectImg(frame, found);
+            if (!caffeDet.DetectImg(frame, found)) {
+              cout << "detection error" << endl;
+              exit(-1);
+            }
 
             // add to buffer
             frameArray.push_back(frame);
@@ -205,9 +210,14 @@ int main(int argc, char* argv[]) {
             // show detection results
             frame.copyTo(detFrame);            
             drawBBox(found, detFrame);
-            resize(detFrame, detFrame, Size(), 0.5, 0.5);
-            imshow("detection", detFrame);
-            pauseFrame(0);
+            if (hp->readStringParameter("Conf.disp") == "y") {
+              resize(detFrame, detFrame, Size(), 0.5, 0.5);
+              imshow("detection", detFrame);
+              pauseFrame(hp->readIntParameter("Conf.pauseMs"));
+            }
+            else {
+              imwrite(outputPath + "det_" +  string(countStr) + ".jpg", detFrame);
+            }
         }
     
         pthread_mutex_unlock(&detSema);  // signal tracking thread

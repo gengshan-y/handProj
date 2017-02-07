@@ -2,6 +2,7 @@
 #define GLOBAL_HPP
 
 #include "draw.hpp"
+#include "parameters.hpp"
 #include <opencv2/opencv.hpp>
 
 /* Define interface for global vars */
@@ -14,5 +15,12 @@ extern const int nbins;  // number of direction bins, fixed
 
 /* Init drawing object */
 extern const objDraw drawObj;
+
+/* For global configurations */
+extern const Parameters *hp;
+
+/* For image output */
+extern string appearancePath;  // to store tracking object appearance
+extern string outputPath;  // to store large output images
 
 #endif  // GLOBAL_HPP

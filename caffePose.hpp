@@ -17,23 +17,42 @@ using std::string;
 
 class PoseMachine {
  public:
-    PoseMachine(const string& model_file, const string& trained_file) {
-        net_ = boost::shared_ptr<Net<float> >(new Net<float>(model_file, 
-                                                             caffe::TEST));
-        net_->CopyTrainedLayersFrom(trained_file);
-    }
-    void Estimate(const string& im_name, cv::Rect rect);
-    void EstimateImg(cv::Mat& img, cv::Rect rect);
-    void EstimateImgPara(vector<cv::Mat>& imgVec, vector<cv::Rect> rectVec);
+  /* Constructor */
+  PoseMachine(const string& model_file, const string& trained_file) {
+    net_ = boost::shared_ptr<Net<float> >(new Net<float>(model_file, 
+                                                         caffe::TEST));
+    net_->CopyTrainedLayersFrom(trained_file);
+  }
+
+  /* Estimate pose using the given model, withing the bounding box.*/
+  void EstimateImgPara(vector<cv::Mat>& imgVec, vector<cv::Rect> rectVec);
 
  private:
-    void parseRes(const float* data_res, float* res);
-    boost::shared_ptr<Net<float> > net_;
-    float *data_buf;  // net input 
-    PoseMachine(){}
-    void Preprocess(cv::Mat img, float* data_buf);
-    void dataSum(float* dataAggre, const float* data_res);
-    void dataPad(cv::Mat cv_img, cv::Mat& padImg, int top, int down, int left, int right);
+  boost::shared_ptr<Net<float> > net_;
+  float *data_buf;  // net input
+
+  /* Constructor */
+  PoseMachine(){}
+
+  /* Parse pose estimation results w.r.t. joint number */
+  void parseRes(const float* source, float* dest, int jointNum);
+
+  /** Preprocess image as did in matlab code, 
+   ** including subtract and transpose
+   */
+  void Preprocess(cv::Mat img, float* data_buf);
+
+  /* Add data_res to dataAggre */
+  void dataSum(float* dataAggre, const float* data_res);
+
+  /* Pad image tmp with given margins */
+  void dataPad(cv::Mat cv_img, cv::Mat& padImg, int top, int down, int left, int right);
+
+  /** get correspounding position of joints in the original image, 
+   ** given the margin and scale.
+   */
+  void getJointPos(int imgNum, float *resJoint, 
+                   int left, int top, float scale, cv::Mat& img);
 };
 
 #endif  // CAFFE_POSE_HPP

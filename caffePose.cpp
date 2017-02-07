@@ -3,29 +3,12 @@
 using namespace caffe;  // NOLINT(build/namespaces)
 using std::string;
 
-/* Parse pose estimation results */
-void PoseMachine::parseRes(const float* data_res, float* res) {
-    for (int k = 0; k < 14; k++) {  // 15 is the background
-        /*
-        if (k != 7 && k != 4) {  // 4 and 7 for l/r wrists
-            continue;
-        }
-        */
-        for (int j = 0; j < 46; j++) {
-            for (int i = 0; i < 46; i++) {
-                res[46*j+i] += data_res[46*46*k+46*j+i];
-                // res[46*j+i] = data_res[46*46*k+46*j+i];  // to display parts
-            }
-        }
-        /* 
-        std::cout << "k=" << k << std::endl;
-        cv::Mat resShow(46, 46, CV_32FC1, res);
-        cv::resize(resShow.t(), resShow, cv::Size(368, 368));
-        cv::imshow("a", resShow);
-        cv::imshow("ori", img);
-        cv::waitKey(0);
-        */
+void PoseMachine::parseRes(const float* source, float* dest, int jointNum) {
+  for (int j = 0; j < 46; j++) {
+    for (int i = 0; i < 46; i++) {
+      dest[46*j+i] += source[46*46*jointNum+46*j+i];
     }
+  }
 }
 
 void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec, 
@@ -35,17 +18,19 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
     data_buf = (float*) calloc(368*368*4*batchSize, sizeof(float));
     const float* data_res;  // net output pointer
     float *dataAggre;  // init with 0??
-    float *res;  // aggregated net output
+    float *resLHand;  // aggregated net output for left hand
+    float *resRHand;  // aggregated net output for right hand
 
     dataAggre = (float*) calloc(batchSize*46*46*15, sizeof(float));
-    res = (float*) calloc(batchSize*46*46, sizeof(float));
+    resLHand = (float*) calloc(batchSize*46*46, sizeof(float));
+    resRHand = (float*) calloc(batchSize*46*46, sizeof(float));
 
     cv::Mat img, padImg;  // volatile image
-    int top, down, left, right;
+    vector<int> top, down, left, right;
     float scale;
 
-    int arraySize = 2;
-    float sizeArray[2] = {600, 900};
+    int arraySize = 1;
+    float sizeArray[1] = {500};
 
     //int arraySize = 2;
     //float sizeArray[2] = {200, 500};
@@ -55,7 +40,13 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
     int arraySize = 10;
     float sizeArray[10] = {270, 370, 470, 570, 670, 770, 870, 970, 1070, 1170};
     */
+
+    /* Form a batch */
     for (int scaleIt = 0; scaleIt < arraySize; scaleIt++) {
+        top.clear();  // clear for a new scale
+        down.clear();
+        left.clear();
+        right.clear();
         for(unsigned int it = 0; it < imgVec.size(); it++) {
             cv::Rect rect = rectVec[it];
             // scaling
@@ -67,12 +58,13 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
             // padding 
             int center_x = int((rect.x + rect.width/2) * scale);
             int center_y = int((rect.y + rect.height/2) * scale);
-            top = 184 - center_y;
-            down = 368 - img.rows - top;
-            left = 184 - center_x;
-            right = 368 - img.cols - left;
-            // std::cout << top << " " << down << " " << left << " " << right << std::endl;
-            dataPad(img, padImg, top, down, left, right);
+            top.push_back(184 - center_y);
+            down.push_back(368 - img.rows - top[it]);
+            left.push_back(184 - center_x);
+            right.push_back(368 - img.cols - left[it]);
+            // std::cout << top[it] << " " << down[it] << " " << left[it] 
+            //           << " " << right[it] << std::endl;
+            dataPad(img, padImg, top[it], down[it], left[it], right[it]);
             
             Preprocess(padImg, data_buf+it*4*368*368);
         }
@@ -96,157 +88,81 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
         dataAggre[i] /= arraySize;
     }
 
-    /* get hand position */
+    
+    /* get hand position */  // 15 is the background
     for (unsigned int it = 0; it < batchSize; it++) {
-        parseRes(data_res + it *15*46*46, res + it*46*46);
+        parseRes(data_res + it *15*46*46, resLHand + it*46*46, 4);
     }
 
-    // filter esitmation points using likelihood
-    for (unsigned int i = 0; i < batchSize; i++) {
-        unsigned int N = 46*46;
-        vector<int> resIdx(N);
-        for(unsigned int it = 0; it < N; it++) {
-            resIdx[it] = it;
-        }
-        sort(resIdx.begin(), resIdx.end(),
-             [&](int x, int y){return res[x + i*46*46] > res[y+i*46*46];});  // sort in reverse order
-
-        // print out content:
-        vector<std::tuple<int, int, float>> respVec;
-        for (auto it=resIdx.begin(); it!=resIdx.end() && res[*it] > 0.4; ++it) {
-            std::tuple<int, int, float> respPoint((*it)/46, (*it)%46, res[*it + i*46*46]);
-            respVec.push_back(respPoint);
-        }
-
-        std::cout << "@@pose for image " << i << std::endl;
-        for (auto it = respVec.begin(); it != respVec.end(); it++) {
-            int xPoint = (-left + 8*std::get<0>(*it)) / scale;
-            int yPoint = (-top + 8*std::get<1>(*it)) / scale;
-            float pPoint = std::get<2>(*it);
-            std::cout << "(" << xPoint << ", " << yPoint << ") p=" << pPoint << std::endl;
-            cv::circle(imgVec[i], cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0),int(pPoint*10));
-        }
+    for (unsigned int it = 0; it < batchSize; it++) {
+        parseRes(data_res + it *15*46*46, resRHand + it*46*46, 7);
     }
+
+  /*
+  std::cout << "k=" << jointNum << std::endl;
+  cv::Mat resShow(46, 46, CV_32FC1, dest);
+  cv::resize(resShow.t(), resShow, cv::Size(368, 368));
+  cv::imshow("a", resShow);
+  cv::imshow("ori", img);
+  cv::waitKey(0);
+  */
+
+  // filter esitmation points using likelihood
+  for (unsigned int it = 0; it < batchSize; it++) {
+    std::cout << "@@pose for image " << it << std::endl;
+    getJointPos(it, resLHand, left[it], top[it], scale, imgVec[it]);
+  }
 }
 
-/** Estimate pose using the given model, withing the bounding box.
- */
-void PoseMachine::EstimateImg(cv::Mat& cv_img, cv::Rect rect) {
-    const float* data_res;  // net output pointer
-    float dataAggre[46*46*15] = {0};  // init with 0
-    float res[46*46] = {0};  // aggregated net output
-    
-    cv::Mat img, padImg;  // volatile image
-    int top, down, left, right;
-    float scale;
+void PoseMachine::getJointPos(int imgNum, float *resJoint, 
+                              int left, int top, float scale, cv::Mat& img) {
+  // prepare index for sorting
+  unsigned int N = 46*46;
+  vector<int> resIdx(N);
+  for(unsigned int it = 0; it < N; it++) {
+    resIdx[it] = it;
+  }
 
-    int arraySize = 1;
-    float sizeArray[1] = {500};
- 
-    //int arraySize = 2;
-    //float sizeArray[2] = {200, 500};
-    // float sizeArray[5] = {200, 270, 360, 450, 500};
- 
-    /* for 1280*720 images
-    int arraySize = 10;
-    float sizeArray[10] = {270, 370, 470, 570, 670, 770, 870, 970, 1070, 1170};
-    */
+  // sort in reverse order
+  sort(resIdx.begin(), resIdx.end(), [&](int x, int y){
+   return resJoint[x+imgNum*46*46] > resJoint[y+imgNum*46*46];
+  });
 
-    for (int scaleIt = 0; scaleIt < arraySize; scaleIt++) {
-        // scaling
-        scale = sizeArray[scaleIt] / max(cv_img.cols, cv_img.rows);
-        // std::cout << "using a scale = " << scale << std::endl;
-        cv::resize(cv_img, img, cv::Size(int(cv_img.cols*scale), 
-                                         int(cv_img.rows*scale)));
+/* use threshold
+  // get position in the heatmap
+  vector<std::tuple<int, int, float>> respVec;
+  for (auto it=resIdx.begin(); it!=resIdx.end() && resJoint[*it] > 0.5; ++it) {
+    std::tuple<int, int, float> respPoint((*it)/46, (*it)%46, resJoint[*it + imgNum*46*46]);
+    respVec.push_back(respPoint);
+  }
 
-        // padding 
-        int center_x = int((rect.x + rect.width/2) * scale);
-        int center_y = int((rect.y + rect.height/2) * scale);
-        top = 184 - center_y;
-        down = 368 - img.rows - top;
-        left = 184 - center_x;
-        right = 368 - img.cols - left;
-        // std::cout << top << " " << down << " " << left << " " << right << std::endl;
-        dataPad(img, padImg, top, down, left, right);
+  // get the original mapping
+  for (auto it = respVec.begin(); it != respVec.end(); it++) {
+    int xPoint = (-left+ 8*std::get<0>(*it)) / scale;
+    int yPoint = (-top + 8*std::get<1>(*it)) / scale;
+    float pPoint = std::get<2>(*it);
+    std::cout << "(" << xPoint << ", " << yPoint << ") p=" << pPoint << std::endl;
+    cv::circle(img, cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0),int(pPoint*10));
+  }
+*/
 
-        Preprocess(padImg, data_buf);
-
-        net_->blob_by_name("data")->set_cpu_data(data_buf);  // should be here
-        net_->ForwardFrom(0);
-        data_res = net_->blob_by_name("Mconv5_stage6")->cpu_data();
-        dataSum(dataAggre, data_res);
-    }
-        
-    /*  other stages
-    data_res = net_->blob_by_name("conv7_stage1")->cpu_data();
-    data_res = net_->blob_by_name("Mconv5_stage2")->cpu_data();    
-    data_res = net_->blob_by_name("Mconv5_stage3")->cpu_data();
-    data_res = net_->blob_by_name("Mconv5_stage4")->cpu_data();
-    data_res = net_->blob_by_name("Mconv5_stage5")->cpu_data();
-    */
-
-    /* average */
-    for (int i = 0; i < 15*46*46; i++) {
-        dataAggre[i] /= arraySize;
-    }
-
-    /* get hand position */
-    for (int k = 0; k < 14; k++) {  // 15 is the background
-        if (k != 7 && k != 4) {  // 4 and 7 for l/r wrists
-            continue;
-        }
-        for (int j = 0; j < 46; j++) {
-            for (int i = 0; i < 46; i++) {
-                res[46*j+i] += data_res[46*46*k+46*j+i];
-                // res[46*j+i] = data_res[46*46*k+46*j+i];  // to display parts
-            }
-        }
-        /* 
-        std::cout << "k=" << k << std::endl;
-        cv::Mat resShow(46, 46, CV_32FC1, res);
-        cv::resize(resShow.t(), resShow, cv::Size(368, 368));
-        cv::imshow("a", resShow);
-        cv::imshow("ori", img);
-        cv::waitKey(0);
-        */
-    }
- 
-    // idx = findMax(res)
-    unsigned int N = sizeof res / sizeof res[0];
-    vector<int> resIdx(N);
-    for(unsigned int it = 0; it < N; it++) {
-        resIdx[it] = it;
-    }
-    sort(resIdx.begin(), resIdx.end(), [&](int x, int y){return res[x] > res[y];});  // sort in reverse order
-    
-    // print out content:
-    vector<std::tuple<int, int, float>> respVec;
-    for (auto it=resIdx.begin(); it!=resIdx.end() && res[*it] > 0.5; ++it) {
-        std::tuple<int, int, float> respPoint((*it)/46, (*it)%46, res[*it]);
-        respVec.push_back(respPoint);
-    }
-
-    for (auto it = respVec.begin(); it != respVec.end(); it++) {
-        int xPoint = (-left + 8*std::get<0>(*it)) / scale;
-        int yPoint = (-top + 8*std::get<1>(*it)) / scale;
-        float pPoint = std::get<2>(*it);
-        std::cout << xPoint << ", " << yPoint << ", " << pPoint << std::endl;
-        cv::circle(cv_img, cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0),int(pPoint*10));
-    }
+  int xPoint = (-left+ 8*(resIdx[0]/46)) / scale;
+  int yPoint = (-top + 8*(resIdx[0]%46)) / scale;
+  float pPoint = resJoint[resIdx[0] + imgNum*46*46];
+  std::cout << "(" << xPoint << ", " << yPoint << ") p=" << pPoint << std::endl;
+  // cv::circle(img, cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0),int(pPoint*10));
+  cv::circle(img, cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0), 5);
 }
 
 
-
-/** do preprocessing as in matlab code, include subtract, transpose operation
- */
 void PoseMachine::Preprocess(cv::Mat img, float* data_buf) {
     img.convertTo(img, CV_32FC3, 1.0/255);
     cv::subtract(img, 0.5, img);
     
     img = img.t();    
 
-    /*
-    cv::imshow("demo", img);
+    /* 
+    cv::imshow("before pose estim", img);
     cv::waitKey(0);
     */
 
@@ -274,8 +190,6 @@ void PoseMachine::Preprocess(cv::Mat img, float* data_buf) {
 }
 
 
-/** Add data_res to dataAggre
- */
 void PoseMachine::dataSum(float* dataAggre, const float* data_res) {
     for (int i = 0; i < 15*46*46; i++) {
         dataAggre[i] += data_res[i];
@@ -283,8 +197,6 @@ void PoseMachine::dataSum(float* dataAggre, const float* data_res) {
 }
 
 
-/** Pad image tmp with given margins
- */
 void PoseMachine::dataPad(cv::Mat tmp, cv::Mat& padImg, int top, int down,
                             int left, int right) {  // Mat& will change outside
     // padding
@@ -307,12 +219,4 @@ void PoseMachine::dataPad(cv::Mat tmp, cv::Mat& padImg, int top, int down,
 
     cv::copyMakeBorder(tmp, tmp, top, down, left, right, cv::BORDER_CONSTANT, cv::Scalar(128, 128, 128));
     tmp.copyTo(padImg);
-}
-
-
-void PoseMachine::Estimate(const string& im_name, cv::Rect rect) {
-    cv::Mat cv_img = cv::imread(im_name);
-    EstimateImg(cv_img, rect);
-    cv::imshow("demo", cv_img);
-    cv::waitKey(0);
 }

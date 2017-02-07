@@ -134,7 +134,12 @@ class TrackingObj {
   unsigned int negNum;  // sample how many negative samples in the image
 
   vector<pair<unsigned int, unsigned int>> tracklet;  // a list of tracking points
+
+  /* For pose estimation */
   Mat oriFrame;  // the whole frame
+  vector<Point> lHand;
+  vector<Point> rHand;
+  
 };
 
 
