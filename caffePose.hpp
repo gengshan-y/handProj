@@ -12,7 +12,7 @@
 #define max(a, b) (((a)>(b)) ? (a) :(b))
 #define min(a, b) (((a)<(b)) ? (a) :(b))
 
-using namespace caffe;  // NOLINT(build/namespaces)
+using namespace caffe;
 using std::string;
 
 class PoseMachine {
@@ -24,12 +24,15 @@ class PoseMachine {
     net_->CopyTrainedLayersFrom(trained_file);
   }
 
-  /* Estimate pose using the given model, withing the bounding box.*/
+  /* Estimate pose using the given model, withing the bounding box */
   void EstimateImgPara(vector<cv::Mat>& imgVec, vector<cv::Rect> rectVec);
 
  private:
   boost::shared_ptr<Net<float> > net_;
   float *data_buf;  // net input
+  vector<int> posXs;
+  vector<int> posYs;
+  vector<float> probs;
 
   /* Constructor */
   PoseMachine(){}

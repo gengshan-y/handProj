@@ -78,7 +78,8 @@ void *poseFunc(void *args) {
         posFrameVec.clear();
         rectVec.clear();
         idVec.clear();
-        // get poes
+
+        // get image, position and ID
         for (unsigned int i = 0; i < trackerArray.size(); i++) {
             tracker = trackerArray[i];
             for (auto it = tracker.begin(); it != tracker.end(); it++) {
@@ -91,8 +92,8 @@ void *poseFunc(void *args) {
                 rectVec.push_back(rect);
                 idVec.push_back(it->getID()); 
             }
-        }   
-    
+        }
+ 
         // should not change net size, so choose to pad
         while (rectVec.size() % batchSize != 0) {
             posFrameVec.push_back(posFrameVec[0]);
@@ -101,21 +102,22 @@ void *poseFunc(void *args) {
             cout << "padded pose input" << endl;
         }
 
+        // estimate poses
         unsigned int currHead = 0;
         while (currHead + batchSize - 1 < rectVec.size()) {
             vector<cv::Mat> tmpFrame(posFrameVec.begin() + currHead, 
                                 posFrameVec.begin() + currHead + batchSize) ;
             vector<cv::Rect> tmpRect(rectVec.begin() + currHead, 
-                                rectVec.begin() + currHead + batchSize) ;
+                                rectVec.begin() + currHead + batchSize);
             posMach.EstimateImgPara(tmpFrame, tmpRect);
             for (unsigned int it = 0; it < tmpFrame.size(); it++) {
                 posFrameVec[currHead + it] = tmpFrame[it];
             }
             currHead += batchSize;
         }
-   
+
+        // show pose results
         for (unsigned int i = 0; i < posFrameVec.size(); i++) {
-                /* show pose results */
                 posFrameVec[i].copyTo(poseFrame);
                 if (hp->readStringParameter("Conf.disp") == "y" && idVec[i] >= 0) {
                     resize(poseFrame, poseFrame, Size(), 0.5, 0.5);

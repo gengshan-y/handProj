@@ -2,6 +2,7 @@
 
 - save pose in tracker
 - draw pose
+- write script to sythesize pose videos
 - clean code
 - get good results on MOT16-9
 - test torch lrcn code? clean neuraltalk?

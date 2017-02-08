@@ -150,6 +150,9 @@ void PoseMachine::getJointPos(int imgNum, float *resJoint,
   int yPoint = (-top + 8*(resIdx[0]%46)) / scale;
   float pPoint = resJoint[resIdx[0] + imgNum*46*46];
   std::cout << "(" << xPoint << ", " << yPoint << ") p=" << pPoint << std::endl;
+  
+  
+
   // cv::circle(img, cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0),int(pPoint*10));
   cv::circle(img, cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0), 5);
 }
