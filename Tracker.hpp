@@ -113,6 +113,9 @@ class TrackingObj {
   /* Get direction of the tracklet */
   bool getDirection();
 
+  /* current frame number */
+  char* getFrameNum(); 
+
   /* save this object for future reference */
   void svAppearance();
 
@@ -137,6 +140,7 @@ class TrackingObj {
 
   /* For pose estimation */
   Mat oriFrame;  // the whole frame
+  char frameNum[50];  // current frame number
   vector<Point> lHand;
   vector<Point> rHand;
   

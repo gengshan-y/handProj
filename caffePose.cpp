@@ -3,6 +3,7 @@
 using namespace caffe;  // NOLINT(build/namespaces)
 using std::string;
 
+
 void PoseMachine::parseRes(const float* source, float* dest, int jointNum) {
   for (int j = 0; j < 46; j++) {
     for (int i = 0; i < 46; i++) {
@@ -11,8 +12,10 @@ void PoseMachine::parseRes(const float* source, float* dest, int jointNum) {
   }
 }
 
+
 void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec, 
-                                  vector<cv::Rect> rectVec) {
+                                  vector<cv::Rect> rectVec,
+                                  vector< std::tuple<int, int, float> > &resVec) {
     unsigned int batchSize = imgVec.size();
     net_->blob_by_name("data")->Reshape(batchSize, 4, 368, 368);  // fit net input
     data_buf = (float*) calloc(368*368*4*batchSize, sizeof(float));
@@ -110,12 +113,14 @@ void PoseMachine::EstimateImgPara(vector<cv::Mat>& imgVec,
   // filter esitmation points using likelihood
   for (unsigned int it = 0; it < batchSize; it++) {
     std::cout << "@@pose for image " << it << std::endl;
-    getJointPos(it, resLHand, left[it], top[it], scale, imgVec[it]);
+    getJointPos(it, resLHand, left[it], top[it], scale, resVec);
+    getJointPos(it, resRHand, left[it], top[it], scale, resVec);
   }
 }
 
 void PoseMachine::getJointPos(int imgNum, float *resJoint, 
-                              int left, int top, float scale, cv::Mat& img) {
+                              int left, int top, float scale,
+                              vector< std::tuple<int, int, float> > &resVec) {
   // prepare index for sorting
   unsigned int N = 46*46;
   vector<int> resIdx(N);
@@ -151,10 +156,9 @@ void PoseMachine::getJointPos(int imgNum, float *resJoint,
   float pPoint = resJoint[resIdx[0] + imgNum*46*46];
   std::cout << "(" << xPoint << ", " << yPoint << ") p=" << pPoint << std::endl;
   
-  
+  resVec.push_back(std::tuple<int, int, float>(xPoint, yPoint, pPoint));
 
   // cv::circle(img, cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0),int(pPoint*10));
-  cv::circle(img, cv::Point(xPoint, yPoint), 1, cv::Scalar(0, 255, 0), 5);
 }
 
 

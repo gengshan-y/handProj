@@ -23,4 +23,11 @@ extern const Parameters *hp;
 extern string appearancePath;  // to store tracking object appearance
 extern string outputPath;  // to store large output images
 
+/* For tracking */
+extern unsigned int currID;  // current object ID, declare with extern and 
+                             // define in .cpp to avoid multiple definition
+
+/* Others */
+extern char countStr [50];  // global current frame, should be locked
+
 #endif  // GLOBAL_HPP

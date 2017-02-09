@@ -63,6 +63,9 @@ void *poseFunc(void *args) {
     vector<Mat> posFrameVec;
     vector<Rect> rectVec;
     vector<int> idVec;
+    vector< tuple<int, int, float> > resVec;  // results w.r.t each frame
+    unsigned int currFrameNum;  // for safety
+    char currFrameNumStr[50];  // for safety
     Mat poseFrame;
     int batchSize = 1;
 
@@ -78,7 +81,12 @@ void *poseFunc(void *args) {
         posFrameVec.clear();
         rectVec.clear();
         idVec.clear();
+        resVec.clear();
+   
+        ofstream outFile("data/out.txt", ofstream::app);  // file writer
 
+        currFrameNum = atoi(trackerArray[0][0].getFrameNum());  // get the first frame num
+        cout << "get frame num " << currFrameNum << endl;
         // get image, position and ID
         for (unsigned int i = 0; i < trackerArray.size(); i++) {
             tracker = trackerArray[i];
@@ -109,7 +117,7 @@ void *poseFunc(void *args) {
                                 posFrameVec.begin() + currHead + batchSize) ;
             vector<cv::Rect> tmpRect(rectVec.begin() + currHead, 
                                 rectVec.begin() + currHead + batchSize);
-            posMach.EstimateImgPara(tmpFrame, tmpRect);
+            posMach.EstimateImgPara(tmpFrame, tmpRect, resVec);
             for (unsigned int it = 0; it < tmpFrame.size(); it++) {
                 posFrameVec[currHead + it] = tmpFrame[it];
             }
@@ -117,19 +125,33 @@ void *poseFunc(void *args) {
         }
 
         // show pose results
-        for (unsigned int i = 0; i < posFrameVec.size(); i++) {
+        for (unsigned int i = 0; i < posFrameVec.size() && idVec[i] >= 0; i++) {
                 posFrameVec[i].copyTo(poseFrame);
-                if (hp->readStringParameter("Conf.disp") == "y" && idVec[i] >= 0) {
+                string title = "pose_" + to_string(idVec[i]);
+                // draw results
+                cv::circle(poseFrame, Point(get<0>(resVec[i]),   // left hand
+                                            get<1>(resVec[i])),
+                           1, cv::Scalar(0, 255, 0), 5);
+                cv::circle(poseFrame, Point(get<0>(resVec[posFrameVec.size()+i]),
+                                            get<1>(resVec[posFrameVec.size()+i])),
+                           1, cv::Scalar(255, 0, 0), 5);  // right hand
+              
+                if (hp->readStringParameter("Conf.disp") == "y") {
                     resize(poseFrame, poseFrame, Size(), 0.5, 0.5);
-                    imshow("pose " + to_string(idVec[i]), poseFrame);
+                    imshow(title, poseFrame);
                     pauseFrame(hp->readIntParameter("Conf.pauseMs"));
                 }
                 else {
-                    imwrite(outputPath + "pose_" + to_string(idVec[i]) + 
-                            "_" + string(countStr) + ".jpg", poseFrame);
+                    imwrite(outputPath + title + "_" + string(countStr) + 
+                            ".jpg", poseFrame);
+                    outFile << title + "_" + string(countStr)
+                            << get<0>(resVec[i]) << ", " 
+                            << get<1>(resVec[i]) << ", "
+                            << get<2>(resVec[i]) << "\n";
                 }
         }
        
+        outFile.close();
         pthread_mutex_unlock(&trkLock);  // signal tracking
     }
     return NULL;

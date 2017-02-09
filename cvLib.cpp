@@ -3,11 +3,6 @@
 using namespace std;
 using namespace cv;
 
-/* Define a list variables */
-/* global current frame to store results */
-char countStr [50];
-unsigned int currID = 0;
-
 void pauseFrame(unsigned int milliSeconds) {
     char key = (char) waitKey(milliSeconds);
     switch (key) {

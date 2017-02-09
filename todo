@@ -1,8 +1,5 @@
 ./main config.c
 
-- save pose in tracker
-- write script to sythesize pose videos
-- clean code
-- get good results on MOT16-9
+- solve countStr confliction by writing a Tracker class, keeping track of the current Frame
 - test torch lrcn code? clean neuraltalk?
 - add simanse feature

@@ -10,10 +10,6 @@
 #define mMax(a, b) (((a)>(b)) ? (a) :(b))
 #define mMin(a, b) (((a)<(b)) ? (a) :(b))
 
-/* Global vars for tracking */
-extern char countStr [50];  // global current frame to store results
-extern unsigned int currID;  // current object ID, declare with extern and 
-                             // define in .cpp to avoid multiple definition
 
 /* Pause current frame */
 void pauseFrame(unsigned int milliSeconds);

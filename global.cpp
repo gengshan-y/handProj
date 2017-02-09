@@ -20,3 +20,9 @@ const Parameters *hp = NULL;
 /* For image output */
 string appearancePath = "/data/gengshan/hdTracking/";  // not activated
 string outputPath = "/data/gengshan/handProj/";
+
+/* For tracking */
+unsigned int currID = 0;
+
+/* Others */
+char countStr [50];

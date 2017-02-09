@@ -1,3 +1,5 @@
+frame.mpg 
+vid/
 .ipynb_checkpoints/
 *.o
 headTracking

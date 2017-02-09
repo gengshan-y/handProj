@@ -25,7 +25,8 @@ class PoseMachine {
   }
 
   /* Estimate pose using the given model, withing the bounding box */
-  void EstimateImgPara(vector<cv::Mat>& imgVec, vector<cv::Rect> rectVec);
+  void EstimateImgPara(vector<cv::Mat>& imgVec, vector<cv::Rect> rectVec, 
+                       vector< std::tuple<int, int, float> > &resVec);
 
  private:
   boost::shared_ptr<Net<float> > net_;
@@ -55,7 +56,8 @@ class PoseMachine {
    ** given the margin and scale.
    */
   void getJointPos(int imgNum, float *resJoint, 
-                   int left, int top, float scale, cv::Mat& img);
+                   int left, int top, float scale, 
+                   vector< std::tuple<int, int, float> > &resVec);
 };
 
 #endif  // CAFFE_POSE_HPP

@@ -267,6 +267,8 @@ float TrackingObj::testSVM(Mat inAppearance) {
 
 void TrackingObj::updateSVM(Mat bgImg, Mat inAppearance) { 
   oriFrame = bgImg;// update frame
+  strcpy(countStr, frameNum);  // update frame number
+  cout << "!!!!copied to" << frameNum << endl;
   appearance = inAppearance;
 
   vector<Mat> newImgPos;
@@ -303,6 +305,10 @@ bool TrackingObj::getDirection() {
   }
 
   return accum > 0;
+}
+
+char* TrackingObj::getFrameNum() {
+  return frameNum;
 }
 
 void TrackingObj::svAppearance() {
