@@ -8,6 +8,27 @@
 using namespace std;
 using namespace cv;
 
+class TrackingObj;  // forward declaration
+
+/** Tracker class **/
+class Tracker {
+ public:
+  /* Constructor */
+  Tracker() {
+    currFrameNum = 0;
+  }
+
+  void update(vector<Rect> found, Mat& targImg);
+  unsigned int getFrameNum();
+  void getBBox(vector<Mat>& imgVec, vector<Rect>& rectVec, vector<int>& idVec, 
+               vector<unsigned int>& frameNumVec);
+
+ private:
+  unsigned int currFrameNum;
+  Mat currFrame;
+  vector<TrackingObj> trkObjs;  // tracked objects
+};
+
 /** The class for tracking object
 ***/
 class TrackingObj {
@@ -113,9 +134,6 @@ class TrackingObj {
   /* Get direction of the tracklet */
   bool getDirection();
 
-  /* current frame number */
-  char* getFrameNum(); 
-
   /* save this object for future reference */
   void svAppearance();
 
@@ -140,7 +158,6 @@ class TrackingObj {
 
   /* For pose estimation */
   Mat oriFrame;  // the whole frame
-  char frameNum[50];  // current frame number
   vector<Point> lHand;
   vector<Point> rHand;
   

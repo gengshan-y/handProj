@@ -25,4 +25,4 @@ string outputPath = "/data/gengshan/handProj/";
 unsigned int currID = 0;
 
 /* Others */
-char countStr [50];
+unsigned int frameCount = 1;;

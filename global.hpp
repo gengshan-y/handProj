@@ -28,6 +28,6 @@ extern unsigned int currID;  // current object ID, declare with extern and
                              // define in .cpp to avoid multiple definition
 
 /* Others */
-extern char countStr [50];  // global current frame, should be locked
+extern unsigned int frameCount;
 
 #endif  // GLOBAL_HPP

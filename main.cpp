@@ -12,7 +12,7 @@ using namespace cv;
 
 vector<Mat> frameArray;  // frame for parallism
 vector<vector<Rect>> foundArray;
-vector<vector<TrackingObj>> trackerArray;  // a tracker to monitor all heads
+vector<Tracker> trackerArray;
 pthread_t trkThread;
 pthread_t poseThread;
 
@@ -26,18 +26,18 @@ pthread_mutex_t trkLock;
 void *trkFunc(void *args) {
   // Initialization
   Mat trkFrame;  // should be a new object if using push
-  vector<TrackingObj> tracker;  // a tracker to monitor all heads
+  Tracker trk;  // keep track of all target objects
 
   // Tracking
   while(1) {
-    vector<TrackingObj> tmpTracker;  // to store curr tracking res for disp
+    Tracker tmpTrk;  // to store curr tracking res for disp
     pthread_mutex_lock(&detSema);  // wait for detection
     pthread_mutex_lock(&trkLock);  // lock trk result
     trackerArray.clear();
     for (unsigned int it = 0; it < frameArray.size(); it++) {
-      updateTracker(foundArray[it], frameArray[it], tracker);
-      tmpTracker = tracker;
-      trackerArray.push_back(tmpTracker);
+      trk.update(foundArray[it], frameArray[it]);  // update by detection
+      tmpTrk = trk;
+      trackerArray.push_back(tmpTrk);
 
       /* show tracking results */
       frameArray[it].copyTo(trkFrame);
@@ -47,6 +47,8 @@ void *trkFunc(void *args) {
         pauseFrame(hp->readIntParameter("Conf.pauseMs"));
       }
       else {
+        char countStr[50];
+        sprintf(countStr, "%04d", frameCount);  // padding with zeros 
         imwrite(outputPath + "trk_" +  string(countStr) + ".jpg", trkFrame);
       }
     }
@@ -59,13 +61,12 @@ void *trkFunc(void *args) {
 
 void *poseFunc(void *args) {
     // Initialization
-    vector<TrackingObj> tracker;  // a tracker to monitor all heads
+    Tracker tracker;  // temp tracker
     vector<Mat> posFrameVec;
     vector<Rect> rectVec;
     vector<int> idVec;
     vector< tuple<int, int, float> > resVec;  // results w.r.t each frame
-    unsigned int currFrameNum;  // for safety
-    char currFrameNumStr[50];  // for safety
+    vector<unsigned int> frameNumVec;  // for safety
     Mat poseFrame;
     int batchSize = 1;
 
@@ -82,14 +83,15 @@ void *poseFunc(void *args) {
         rectVec.clear();
         idVec.clear();
         resVec.clear();
+        frameNumVec.clear();  // for safety
    
         ofstream outFile("data/out.txt", ofstream::app);  // file writer
 
-        currFrameNum = atoi(trackerArray[0][0].getFrameNum());  // get the first frame num
-        cout << "get frame num " << currFrameNum << endl;
         // get image, position and ID
         for (unsigned int i = 0; i < trackerArray.size(); i++) {
             tracker = trackerArray[i];
+            tracker.getBBox(posFrameVec, rectVec, idVec, frameNumVec);
+            /*
             for (auto it = tracker.begin(); it != tracker.end(); it++) {
                 Mat posFrame;
                 it->getFrame().copyTo(posFrame);
@@ -100,6 +102,7 @@ void *poseFunc(void *args) {
                 rectVec.push_back(rect);
                 idVec.push_back(it->getID()); 
             }
+            */
         }
  
         // should not change net size, so choose to pad
@@ -142,9 +145,11 @@ void *poseFunc(void *args) {
                     pauseFrame(hp->readIntParameter("Conf.pauseMs"));
                 }
                 else {
+                    char countStr[50];
+                    sprintf(countStr, "%04d", frameNumVec[i]);  // padding with zeros
                     imwrite(outputPath + title + "_" + string(countStr) + 
                             ".jpg", poseFrame);
-                    outFile << title + "_" + string(countStr)
+                    outFile << title + "_" + string(countStr) << ", "
                             << get<0>(resVec[i]) << ", " 
                             << get<1>(resVec[i]) << ", "
                             << get<2>(resVec[i]) << "\n";
@@ -176,7 +181,7 @@ int main(int argc, char* argv[]) {
 
     /* Main thread for fetch and detection */
     // Initialization
-    unsigned int count = 1;  // initialize the fist frame to be decoded, 80
+    char countStr [50];
     vector<Rect> found;  // to store detection results
 
     // Build detector
@@ -195,7 +200,7 @@ int main(int argc, char* argv[]) {
     unsigned int totalFrame = targetVid.get(CV_CAP_PROP_FRAME_COUNT);
 
     // Set current to a pre-defined frame
-    targetVid.set(CV_CAP_PROP_POS_FRAMES, count);
+    targetVid.set(CV_CAP_PROP_POS_FRAMES, frameCount);
 
     for(;;) {
         pthread_mutex_lock(&frameLock);  // lock frame and detection results
@@ -206,14 +211,14 @@ int main(int argc, char* argv[]) {
         while (frameArray.size() < 1) {             
             Mat detFrame;  // frame to store detection results
             Mat frame;  // to store video frames, should be re-constructed
-            count++;
+            frameCount++;
             targetVid >> frame;
             if(frame.empty()) {return -1;}
 
-            // if (count % 3 != 0) {continue;}  // skip some frames
+            // if (frameCount % 3 != 0) {continue;}  // skip some frames
 
             // get frame count
-            sprintf(countStr, "%04d", count);  // padding with zeros
+            sprintf(countStr, "%04d", frameCount);  // padding with zeros
             cout << "------------------------------------------" 
                  << "------------------------------------------" << endl;
             cout << "frame\t" << countStr << "/" << totalFrame << endl;

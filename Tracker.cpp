@@ -1,6 +1,124 @@
 #include "Tracker.hpp"
 #include "cvLib.hpp"
 
+unsigned int Tracker::getFrameNum() {
+  return currFrameNum;
+}
+
+
+void Tracker::getBBox(vector<Mat>& imgVec, vector<Rect>& rectVec, 
+                      vector<int>& idVec, vector<unsigned int>& frameNumVec) {
+  for (auto it = trkObjs.begin(); it != trkObjs.end(); it++) {
+    imgVec.push_back(currFrame);
+    rectVec.push_back(it->getBBox());
+    idVec.push_back(it->getID());
+    frameNumVec.push_back(currFrameNum);
+  }
+}
+
+void Tracker::update(vector<Rect> found, Mat& targImg) {
+    targImg.copyTo(currFrame);  // get current frame
+    currFrameNum = frameCount;
+    Mat oriImg;
+    targImg.copyTo(oriImg);  // save original image
+
+    /* Upgrade old tracking objects */
+    for (auto it = trkObjs.begin(); it != trkObjs.end(); it++) {
+        (*it).incAge();
+        (*it).predKalmanFilter();
+        (*it).showInfo();
+    }
+
+    /* Build measured objects */
+    vector<TrackingObj> meaObjs;
+    for (auto it = found.begin(); it != found.end(); it++)
+        meaObjs.push_back(measureObj(targImg, *it));  // measured object
+    // testStateParsing(meaObjs[0]);  // test the parsing interface
+
+    /* Update/Add tracking objects */
+    cout << "@@data association" << endl;
+    vector<TrackingObj> lastTracker = trkObjs;  // save for association
+    for (auto it = meaObjs.begin(); it != meaObjs.end(); it++) {
+        /* get measured state */
+        cout << "measured..." << endl;
+        (*it).showState();
+        vector<float> meaArray = (*it).getStateVec();
+
+        vector<float> scoreArr;  // to store the comparison scores 
+        for (auto itt = lastTracker.begin(); itt != lastTracker.end(); itt++) {
+            /* get tracker predicted state */
+            cout << "predicted..." << endl;
+            (*itt).showState();
+            vector<float> predArray = (*itt).getStateVec();
+
+            float score;
+            // compare states
+            float stateScore = meaStateDis(meaArray, predArray);
+            // float alpha = 0.001; 
+            // stateScore = exp(-stateScore * alpha);  // normalize to 0-1, tune a
+            cout << "iou metric:\t" << stateScore << endl;;
+            // get SVM score for measurement
+            float SVMScore = (*itt).testSVM( (*it).getAppearance() );
+            cout << "SVM score: \t" << SVMScore << endl;
+            // waitKey(0);
+            score = (stateScore + SVMScore) / 2.;
+
+            scoreArr.push_back(score);  // add score to an array
+        }
+
+        unsigned int targIdx = distance(scoreArr.begin(),
+                              max_element(scoreArr.begin(), scoreArr.end()));
+        // unsigned int targIdx = distance(scoreArr.begin(),
+        //                       min_element(scoreArr.begin(), scoreArr.end()));
+        // if the highest score is higher than a th
+        // if (scoreArr.size() != 0 && scoreArr[targIdx] < 1000) {
+        if (scoreArr.size() != 0 && scoreArr[targIdx] > 0.5) {
+            cout << "**ID " << trkObjs[targIdx].getID() << " updated" << endl;
+            /* update the according tracker */
+            // update tracklet
+            trkObjs[targIdx].updateTracklet( (*it).getPos() );
+            drawObj.drawTracklet(targImg, trkObjs[targIdx].getID(),
+                                 trkObjs[targIdx].getTracklet());
+            // update SVM
+            trkObjs[targIdx].updateSVM( oriImg, (*it).getAppearance() );
+            trkObjs[targIdx].updateKalmanFilter( (*it).getMeaState() );
+            trkObjs[targIdx].state2Attr();
+
+            // reset age
+            trkObjs[targIdx].resetAge();
+            continue;
+        }
+
+        /* Else push detection results to tracker */
+        // initialize tracklet
+        (*it).initTracklet();
+        // initialize SVM for *it
+        (*it).initSVM(targImg);
+        trkObjs.push_back(*it);
+        currID++;  // update ID
+        cout << "**ID " << trkObjs.back().getID() << " added." << endl;
+        // trkObjs.back().showInfo();
+    }
+
+    /* Remove outdated objects */
+    for (int it = trkObjs.size() - 1; it >= 0; it--) {
+        if ( (trkObjs[it]).getAge() > 20 ) {  // set age as 20
+            cout << "$$ID " << trkObjs[it].getID() << " to be deleted." << endl;
+
+            // delete SVM for it
+            (*(trkObjs.begin() + it)).rmSVM();
+
+            // save appearance for future reference
+            // (*(trkObjs.begin() + it)).svAppearance();
+            destroyWindow("object " + \
+               to_string((trkObjs.begin() + it)->getID()));  // destory window
+            destroyWindow("pose_" + \
+               to_string((trkObjs.begin() + it)->getID()));
+            trkObjs.erase(trkObjs.begin() + it);
+        }
+    }
+}
+
 unsigned int TrackingObj::getAge() {
   return age;
 }   
@@ -267,8 +385,6 @@ float TrackingObj::testSVM(Mat inAppearance) {
 
 void TrackingObj::updateSVM(Mat bgImg, Mat inAppearance) { 
   oriFrame = bgImg;// update frame
-  strcpy(countStr, frameNum);  // update frame number
-  cout << "!!!!copied to" << frameNum << endl;
   appearance = inAppearance;
 
   vector<Mat> newImgPos;
@@ -305,10 +421,6 @@ bool TrackingObj::getDirection() {
   }
 
   return accum > 0;
-}
-
-char* TrackingObj::getFrameNum() {
-  return frameNum;
 }
 
 void TrackingObj::svAppearance() {

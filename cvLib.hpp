@@ -20,10 +20,6 @@ vector<Rect> rmInnerBoxes(vector<Rect> found);
 /* build tracking object based on a detection result */
 TrackingObj measureObj(Mat targImg, Rect detRes);
 
-/* get cropped images from frame */
-void updateTracker(vector<Rect> found, Mat& targImg, 
-                   vector<TrackingObj>& tracker);
-
 /* draw bounding box */
 void drawBBox(vector<Rect> found, Mat& targImg);
 
