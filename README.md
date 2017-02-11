@@ -1,11 +1,3 @@
-## todo
-add something like sampleBgImg(bgImg), to sample foreground image
-ask how to get good samples in practice
-visualize sampled images
-make tracking better
-make pose better
-action recognition
-
 **Under development**
 
 ## Multi-Hands Tracking by multiple object tracking and pose estimation
@@ -34,8 +26,13 @@ We used *faster-rcnn* to detect objects. We used *HOG+SVM* to obtain appearance 
 - run genVideo.ipynb to generate example videos 
 
 ## TODO
+- add something like sampleBgImg(bgImg), to sample foreground image
+- ask how to get good samples in practice
+- visualize sampled images
+- make tracking better
+- make pose better
+- action recognition
 - appearance model may be substituted by Siamese network for better performance  
-- should use `ffmpeg -r 5 -i %04d.jpg -vb 20M frame.mpg` to get better image quality
 
 ## Acknowledgement
 - faster-rcnn c++ implementation is based on [this blog](http://blog.csdn.net/xyy19920105/article/details/50440957)
