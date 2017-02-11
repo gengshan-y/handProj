@@ -1,5 +1,0 @@
-./main config.c
-
-- solve countStr confliction by writing a Tracker class, keeping track of the current Frame
-- test torch lrcn code? clean neuraltalk?
-- add simanse feature

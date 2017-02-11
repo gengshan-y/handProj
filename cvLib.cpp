@@ -70,7 +70,7 @@ void extBBox(vector<Rect>& found) {
 Mat combImgs(Mat img1, Mat img2) {
     Size sz1 = img1.size();
     Size sz2 = img2.size();
-    Mat img3(sz1.height + 40, sz1.width + sz2.width, CV_8UC3,
+    Mat img3(sz1.height, sz1.width + sz2.width, CV_8UC3,
              cvScalar(255, 255, 255));
     img1.copyTo(img3(Rect(0, 0, sz1.width, sz1.height)));
     img2.copyTo(img3(Rect(sz1.width, 0, sz2.width, sz2.height)));

@@ -24,5 +24,11 @@ string outputPath = "/data/gengshan/handProj/";
 /* For tracking */
 unsigned int currID = 0;
 
-/* Others */
-unsigned int frameCount = 1;;
+/* W.r.t. camera */
+Mat currFrame;
+unsigned int currFrameCount = 1;
+
+/* For processes after detection */
+Mat frame;
+unsigned int frameCount;
+

@@ -72,7 +72,8 @@ void Tracker::update(vector<Rect> found, Mat& targImg) {
         //                       min_element(scoreArr.begin(), scoreArr.end()));
         // if the highest score is higher than a th
         // if (scoreArr.size() != 0 && scoreArr[targIdx] < 1000) {
-        if (scoreArr.size() != 0 && scoreArr[targIdx] > 0.5) {
+        if (scoreArr.size() != 0 && scoreArr[targIdx] > 
+                                    hp->readDoubleParameter("Conf.trk_score")) {
             cout << "**ID " << trkObjs[targIdx].getID() << " updated" << endl;
             /* update the according tracker */
             // update tracklet
@@ -102,7 +103,8 @@ void Tracker::update(vector<Rect> found, Mat& targImg) {
 
     /* Remove outdated objects */
     for (int it = trkObjs.size() - 1; it >= 0; it--) {
-        if ( (trkObjs[it]).getAge() > 20 ) {  // set age as 20
+        if ( (trkObjs[it]).getAge() > hp->readIntParameter("Conf.trk_age") ) { 
+        // set age as 20
             cout << "$$ID " << trkObjs[it].getID() << " to be deleted." << endl;
 
             // delete SVM for it
@@ -350,10 +352,11 @@ void TrackingObj::initSVM(Mat bgImg) {
 
   /* Preapare negative features */
   vector<Mat> negImgVec = sampleBgImg(bgImg);
-  // for (auto it = negImgVec.begin(); it != negImgVec.end(); it++) {
-  //   imshow("", *it);
-  //   waitKey(0); 
-  // }
+  Mat tmpImg = combImgs(appearance, Mat(negImgVec[0].rows, 100, CV_8UC3));
+  for (auto it = negImgVec.begin(); it != negImgVec.end(); it++) {
+    tmpImg = combImgs(tmpImg, *it);
+  }
+  imshow("samples", tmpImg);  // pos & neg
   Mat negFeat = trackerSVM->img2feat(negImgVec);
 
   trackerSVM->fillData(posFeat, negFeat);
@@ -373,12 +376,6 @@ float TrackingObj::testSVM(Mat inAppearance) {
   Mat cmbedImg = combImgs(inAppearance, appearance);
   imshow("", cmbedImg);
   // waitKey(0);
-  
-  /*
-  imshow("img1", inAppearance);
-  imshow("img2", appearance);
-  pauseFrame(0);
-  */
 
   return res;
 }

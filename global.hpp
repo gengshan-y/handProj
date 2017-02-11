@@ -27,7 +27,12 @@ extern string outputPath;  // to store large output images
 extern unsigned int currID;  // current object ID, declare with extern and 
                              // define in .cpp to avoid multiple definition
 
-/* Others */
+/* W.r.t. camera */
+extern Mat currFrame;
+extern unsigned int currFrameCount;
+
+/* For processes after detection */
+extern Mat frame;
 extern unsigned int frameCount;
 
 #endif  // GLOBAL_HPP
