@@ -27,6 +27,7 @@ void *trkFunc(void *args) {
   // Initialization
   Mat trkFrame;  // should be a new object if using push
   char countStr[50];
+  double dispRatio = hp->readDoubleParameter("Conf.dispRatio");
 
   // Tracking
   while(1) {
@@ -36,7 +37,7 @@ void *trkFunc(void *args) {
 
     /* show tracking results */
     if (hp->readIntParameter("Conf.disp") == 1) {
-      resize(trkFrame, trkFrame, Size(), 0.5, 0.5);
+      resize(trkFrame, trkFrame, Size(), dispRatio, dispRatio);
       imshow("tracking", trkFrame);
       pauseFrame(hp->readIntParameter("Conf.pauseMs"));
     }
@@ -61,6 +62,7 @@ void *poseFunc(void *args) {
   Mat poseFrame;
   char countStr[50];
   int batchSize = 1;
+  double dispRatio = hp->readDoubleParameter("Conf.dispRatio");
 
   // Build pose estimator
   Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
@@ -117,7 +119,7 @@ void *poseFunc(void *args) {
                  1, cv::Scalar(255, 0, 0), 5);  // right hand
            
       if (hp->readIntParameter("Conf.disp") == 1) {
-        resize(poseFrame, poseFrame, Size(), 0.5, 0.5);
+        resize(poseFrame, poseFrame, Size(), dispRatio, dispRatio);
         imshow(title, poseFrame);
         pauseFrame(hp->readIntParameter("Conf.pauseMs"));
       }
@@ -143,6 +145,7 @@ void *detFunc(void *args) {
   // initialization
   Mat detFrame;  // frame to store detection results
   char countStr[50];
+  double dispRatio = hp->readDoubleParameter("Conf.dispRatio");
 
   // Build detector
   string model_file = "/home/gengshan/workDec/threadProc/model/faster_rcnn_test.pt";
@@ -157,9 +160,7 @@ void *detFunc(void *args) {
     if(currFrame.empty()) {pthread_mutex_unlock(&fetLock); continue;}
     currFrame.copyTo(frame);
     frameCount = currFrameCount;
-    pthread_mutex_unlock(&fetLock);
 
-    pthread_mutex_lock(&posSema);  // begin of a whole process
 
     // pre-process a frame
     resize(frame, frame, Size(), 1, 1);  // set to same-scale as train
@@ -174,7 +175,7 @@ void *detFunc(void *args) {
     frame.copyTo(detFrame);
     drawBBox(found, detFrame);
     if (hp->readIntParameter("Conf.disp") == 1) {
-      resize(detFrame, detFrame, Size(), 0.5, 0.5);
+      resize(detFrame, detFrame, Size(), dispRatio, dispRatio);
       imshow("detection", detFrame);
       pauseFrame(hp->readIntParameter("Conf.pauseMs"));
     }
@@ -203,11 +204,12 @@ int main(int argc, char* argv[]) {
     hp = new Parameters(paramFileName);
 
     /* Create threads */
+    pthread_mutex_lock(&fetLock);
     pthread_mutex_lock(&detSema);
-    pthread_mutex_lock(&trkSema);
+    // pthread_mutex_lock(&trkSema);
     pthread_create(&detThread, NULL, detFunc, NULL);
     pthread_create(&trkThread, NULL, trkFunc, NULL);
-    pthread_create(&poseThread, NULL, poseFunc, NULL);
+    // pthread_create(&poseThread, NULL, poseFunc, NULL);
 
     /* Main thread for fetch and detection */
     // Initialization
@@ -225,7 +227,7 @@ int main(int argc, char* argv[]) {
     targetVid.set(CV_CAP_PROP_POS_FRAMES, currFrameCount);
 
     for(;;) {
-        pthread_mutex_lock(&fetLock);  // protect currFrame and frameCount
+        pthread_mutex_lock(&trkSema);  // protect currFrame and frameCount
         currFrameCount++;
         targetVid >> currFrame;
         if(currFrame.empty()) {return -1;}
