@@ -63,8 +63,8 @@ void *poseFunc(void *args) {
   int batchSize = 1;
 
   // Build pose estimator
-  Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
   Caffe::set_mode(Caffe::GPU);
+  Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
   string model_file = "/home/gengshan/workDec/threadProc/model/pose_deploy_centerMap.prototxt";
   string weights_file = "/home/gengshan/workDec/threadProc/model/pose_iter_985000_addLEEDS.caffemodel";
   PoseMachine posMach = PoseMachine(model_file, weights_file);
@@ -147,8 +147,8 @@ void *detFunc(void *args) {
   // Build detector
   string model_file = "/home/gengshan/workDec/threadProc/model/faster_rcnn_test.pt";
   string weights_file = "/home/gengshan/workDec/threadProc/model/VGG16_faster_rcnn_final.caffemodel";
-  Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
   Caffe::set_mode(Caffe::GPU);
+  Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
   Detector caffeDet = Detector(model_file, weights_file);
 
   while(1) {

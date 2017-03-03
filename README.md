@@ -1,8 +1,8 @@
 **Under development**
 
 ## Multi-Hands Tracking by multiple object tracking and pose estimation
-This is the online version of the multi-hands tracking pipeline. The fps depends 
-on the time to process a frame (currently ~0.7s on Tesla K80).
+This is the experimental version of the multi-hands tracking pipeline. Featues for 
+camera capture were deleted.
 
 We used *faster-rcnn* to detect objects. We used *HOG+SVM* to obtain appearance similarity and *Kalman filter* to model motion dynamics. Summing up the scores from appearance model and motion model, we associate detections to tracking objects.  Then [*Convulutional Pose Machines*](https://github.com/shihenw/convolutional-pose-machines-release) was used to estimate wrist postions.
 
