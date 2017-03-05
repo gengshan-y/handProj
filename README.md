@@ -1,5 +1,9 @@
 **Under development**
 
+## problems
+2. build a pipeline system, use it to extract poses. 
+3. use mxnet or torch to build the recognition system.
+
 ## Multi-Hands Tracking by multiple object tracking and pose estimation
 This is the experimental version of the multi-hands tracking pipeline. Featues for 
 camera capture were deleted.

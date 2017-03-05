@@ -9,7 +9,7 @@ bool Detector::DetectImg(cv::Mat& cv_img, vector<cv::Rect>& found) {
     float NMS_THRESH = 0.3;
     const int  max_input_side=1000;
     const int  min_input_side=600;
-
+    
     cv::Mat cv_new(cv_img.rows, cv_img.cols, CV_32FC3, cv::Scalar(0,0,0));
     if(cv_img.empty())
     {
@@ -35,6 +35,7 @@ bool Detector::DetectImg(cv::Mat& cv_img, vector<cv::Rect>& found) {
     int width = int(cv_img.cols * img_scale);
     int num_out;
     cv::Mat cv_resized;
+
 
     float im_info[3];
     float data_buf[height*width*3];
@@ -80,6 +81,7 @@ bool Detector::DetectImg(cv::Mat& cv_img, vector<cv::Rect>& found) {
         }
     }
 
+    /* Init net */
     net_->blob_by_name("data")->Reshape(1, 3, height, width);
     net_->blob_by_name("data")->set_cpu_data(data_buf);
     net_->blob_by_name("im_info")->set_cpu_data(im_info);

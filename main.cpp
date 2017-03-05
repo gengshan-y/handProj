@@ -67,6 +67,8 @@ void *poseFunc(void *args) {
   // Build pose estimator
   Caffe::set_mode(Caffe::GPU);
   Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
+  Caffe::DeviceQuery();
+
   string model_file = "/home/gengshan/workDec/threadProc/model/pose_deploy_centerMap.prototxt";
   string weights_file = "/home/gengshan/workDec/threadProc/model/pose_iter_985000_addLEEDS.caffemodel";
   PoseMachine posMach = PoseMachine(model_file, weights_file);
@@ -143,6 +145,7 @@ void *poseFunc(void *args) {
 
 void *detFunc(void *args) {
   // initialization
+  cudaSetDevice(hp->readIntParameter("Conf.GPUID"));
   Mat detFrame;  // frame to store detection results
   char countStr[50];
   double dispRatio = hp->readDoubleParameter("Conf.dispRatio");
@@ -152,6 +155,7 @@ void *detFunc(void *args) {
   string weights_file = "/home/gengshan/workDec/threadProc/model/VGG16_faster_rcnn_final.caffemodel";
   Caffe::set_mode(Caffe::GPU);
   Caffe::SetDevice(hp->readIntParameter("Conf.GPUID"));
+  Caffe::DeviceQuery();
   Detector caffeDet = Detector(model_file, weights_file);
 
   while(1) {

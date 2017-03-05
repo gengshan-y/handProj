@@ -4,7 +4,7 @@ Conf:
   // vidPath = "/data/gengshan/BUS/front1.m4v";
   // vidPath = "rtsp://admin:a123456@192.168.61.102";
   // vidPath = "/data/gengshan/MOT16/test/MOT16-01/img1/%06d.jpg";
-  disp = 0;
+  disp = 1;
   write = 1;
   dispRatio = 0.5;                // when displaying results
   
