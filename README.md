@@ -1,6 +1,6 @@
 **Under development**
 
-## Multi-Hands Tracking by multiple object tracking and pose estimation
+## Multi-person Pose Tracking
 This is the experimental version of multi-person pose tracking pipeline.
 
 We used *faster-rcnn* to detect objects. We used *HOG+SVM* to obtain appearance similarity and *Kalman filter* to model motion dynamics. Summing up the scores from appearance model and motion model, we associate detections to tracking objects.  Then [*Convulutional Pose Machines*](https://github.com/shihenw/convolutional-pose-machines-release) was used to estimate wrist postions.
